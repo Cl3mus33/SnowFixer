@@ -4,6 +4,7 @@ public sealed record ExtractResult(
     int RecordsMatched,
     int MeshesDuplicated,
     int MeshesFailed,
+    int MalformedRecordsSkipped,
     int AlternateTexturesBaked,
     int AlternateTexturesFailed,
     int ShaderFlagsPatched,

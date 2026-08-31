@@ -35,6 +35,10 @@ public static class Exports
         public bool IsFailed;
         public string? ResultJson;
         public string? ErrorMessage;
+        /// <summary>Full exception.ToString() for fatal errors; kept separate from the concise
+        /// message so the native progress window can show actionable details without changing its
+        /// status line.</summary>
+        public string? ErrorDetails;
     }
 
     [UnmanagedCallersOnly(EntryPoint = "start_extract_run")]
@@ -62,6 +66,7 @@ public static class Exports
                 IsDone = true,
                 IsFailed = true,
                 ErrorMessage = ex.Message,
+                ErrorDetails = ex.ToString(),
             };
             return;
         }
@@ -87,6 +92,7 @@ public static class Exports
             catch (Exception ex)
             {
                 state.ErrorMessage = ex.Message;
+                state.ErrorDetails = ex.ToString();
                 state.IsFailed = true;
             }
             finally
@@ -134,7 +140,8 @@ public static class Exports
             IsDone: state?.IsDone ?? false,
             IsFailed: state?.IsFailed ?? false,
             ResultJson: state?.ResultJson,
-            ErrorMessage: state?.ErrorMessage);
+            ErrorMessage: state?.ErrorMessage,
+            ErrorDetails: state?.ErrorDetails);
 
         return ToNativeUtf8(JsonSerializer.Serialize(payload));
     }
@@ -165,5 +172,6 @@ public static class Exports
         bool IsDone,
         bool IsFailed,
         string? ResultJson,
-        string? ErrorMessage);
+        string? ErrorMessage,
+        string? ErrorDetails);
 }

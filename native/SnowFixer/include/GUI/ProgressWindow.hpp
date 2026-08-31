@@ -46,7 +46,10 @@ private:
     // resultJson is the DNNE bridge's raw ExtractResult JSON (PascalCase, see
     // SnowFixer.Core.Pipeline.ExtractResult) - empty if the run failed before producing one.
     // Writes SnowFixer-log.txt into the output location.
-    void onWorkerFinished(bool success, const wxString& failureDetail, const std::string& resultJson);
+    // failureDetail is the concise exception message; failureDetails is the full type/stack text
+    // returned by the managed bridge for fatal errors.
+    void onWorkerFinished(bool success, const wxString& failureDetail, const wxString& failureDetails,
+        const std::string& resultJson);
     void onCloseButtonPressed(wxCommandEvent& event);
     void onDetailsPaneChanged(wxCollapsiblePaneEvent& event);
 };

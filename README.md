@@ -22,6 +22,8 @@ Point Snow Fixer at your load order (via Mod Organizer 2, or a plain Data folder
   own snow texture, aware of the Vanilla / Complex Material / True PBR conventions (correct
   compression format + a matching PBRNifPatcher json when needed), and apply it to exactly the
   right part ("Skirt") of the generated DirtCliffs meshes.
+- **Error handling** — malformed asset paths are reported and skipped per record where possible;
+  fatal run errors include detailed exception information in the progress window.
 - Run fully offline against your files — it never touches the running game.
 
 ## Two native tools, one patch engine
