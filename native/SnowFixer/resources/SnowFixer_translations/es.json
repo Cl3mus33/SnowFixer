@@ -1,0 +1,101 @@
+{
+  "_language": "Español",
+  "common": {
+    "browse": "Examinar",
+    "cancel": "Cancelar"
+  },
+  "launcher": {
+    "intro": "Analiza la carpeta Data de Skyrim SE vanilla en busca de cualquier registro cuyo EditorID o ruta de malla mencione \"snow\", duplica la malla ganadora para cada uno, y escribe un plugin que apunta a los duplicados - que así permanecen libremente editables sin tocar ningún archivo original.",
+    "gameLocation": {
+      "label": "Ubicación del juego",
+      "dialogTitle": "Seleccionar ubicación del juego"
+    },
+    "outputLocation": {
+      "label": "Carpeta de salida",
+      "dialogTitle": "Seleccionar carpeta de salida"
+    },
+    "modManager": {
+      "label": "Gestor de mods",
+      "none": "Ninguno / Vortex",
+      "mo2": "Mod Organizer 2"
+    },
+    "mo2InstancePath": {
+      "label": "Ruta de la instancia de MO2",
+      "dialogTitle": "Seleccionar carpeta de la instancia de MO2"
+    },
+    "landscapeVertexColors": {
+      "label": "Vertex colors del terreno",
+      "help": "Elimina el tinte de vertex colors en los registros de terreno (LAND), para que se rendericen de forma independiente en lugar de conservar una gradación de color pensada para otro aspecto.",
+      "none": "No tocar los vertex colors del terreno",
+      "all": "Eliminar en todo el terreno",
+      "snow": "Eliminar solo donde se use una textura clasificada como nieve"
+    },
+    "meshVertexColors": {
+      "label": "Colores de vértice de meshes",
+      "help": "Elimina el tinte de color de vértice incorporado en los meshes de la carpeta landscape (rocas, acantilados, icebergs, ...), incluyendo variantes de DLC bajo DLC01\\Landscape\\, DLC02\\Landscape\\, etc.",
+      "none": "No tocar los colores de vértice de los meshes",
+      "snowOnly": "Solo en los meshes de nieve generados",
+      "all": "En todos los meshes de landscape, incluidos los originales sin nieve"
+    },
+    "collisionMaterial": {
+      "label": "Material de Colisión (Sonidos de Pasos)",
+      "help": "Reasigna los materiales de colisión de los meshes de nieve generados hacia su equivalente de nieve (actualmente solo Tierra/Hierba -> Nieve) para que el sonido de pasos coincida con el aspecto nevado. Funciona por fragmento de colisión, por lo que los materiales no relacionados en el mismo mesh no se modifican.",
+      "none": "No tocar los materiales de colisión",
+      "snowOnly": "Aplicar en los meshes de nieve generados"
+    },
+    "meshBlacklist": {
+      "label": "Lista negra de meshes",
+      "help": "Los meshes que coincidan con una regla aquí nunca se duplican ni se parchean. Comodines (*) permitidos, p. ej. \"*\\trees\\*\". Clic derecho para añadir/quitar filas.",
+      "column": "Regla"
+    },
+    "editorIdKeywords": {
+      "label": "Palabras clave de EditorID en lista negra",
+      "help": "Los registros cuyo EditorID contenga una de estas palabras (sin distinguir mayúsculas) se omiten por completo - útil para excluir falsos positivos. Clic derecho para añadir/quitar filas.",
+      "column": "Palabra clave"
+    },
+    "dirtCliffsSnowVariant": {
+      "label": "Variante de Nieve de DirtCliffsRoots",
+      "checkbox": "Generar una variante de nieve de la textura DirtCliffsRoots01",
+      "help": "Genera el/los archivo(s) de textura y los aplica a la parte «Skirt» de las mallas DirtCliffs generadas."
+    },
+    "tab": {
+      "general": "General",
+      "options": "Opciones"
+    },
+    "language": {
+      "label": "Idioma"
+    },
+    "theme": {
+      "label": "Tema",
+      "system": "Sistema",
+      "light": "Claro",
+      "dark": "Oscuro"
+    },
+    "startButton": "Iniciar",
+    "missingGameLocation": {
+      "message": "Por favor selecciona la ubicación de instalación de tu juego.",
+      "title": "Falta la ubicación del juego"
+    },
+    "missingOutputLocation": {
+      "message": "Por favor selecciona una carpeta de salida.",
+      "title": "Falta la carpeta de salida"
+    },
+    "missingMo2Instance": {
+      "message": "Por favor selecciona la carpeta de tu instancia de Mod Organizer 2.",
+      "title": "Falta la instancia de MO2"
+    }
+  },
+  "progress": {
+    "starting": "Iniciando...",
+    "showDetails": "Mostrar detalles",
+    "working": "Trabajando...",
+    "done": "Hecho.",
+    "failed": "Error - ver detalles abajo.",
+    "doneClose": "Hecho - Cerrar",
+    "failedClose": "Error - Cerrar",
+    "completion": {
+      "message": "Generación completa. No olvides activar el plugin de salida de Snow Fixer en la lista de plugins de tu gestor de mods si aún no está activo.",
+      "title": "Snow Fixer"
+    }
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "_language": "Italiano",
+  "common": {
+    "browse": "Sfoglia",
+    "cancel": "Annulla"
+  },
+  "launcher": {
+    "intro": "Analizza la cartella Data di Skyrim SE vanilla alla ricerca di ogni record il cui EditorID o percorso mesh menzioni \"snow\", duplica la mesh vincente per ciascuno e scrive un plugin che punta ai duplicati - che restano così liberamente modificabili senza toccare alcun file originale.",
+    "gameLocation": {
+      "label": "Posizione del gioco",
+      "dialogTitle": "Seleziona la posizione del gioco"
+    },
+    "outputLocation": {
+      "label": "Cartella di output",
+      "dialogTitle": "Seleziona la cartella di output"
+    },
+    "modManager": {
+      "label": "Mod manager",
+      "none": "Nessuno / Vortex",
+      "mo2": "Mod Organizer 2"
+    },
+    "mo2InstancePath": {
+      "label": "Percorso istanza MO2",
+      "dialogTitle": "Seleziona la cartella dell'istanza MO2"
+    },
+    "landscapeVertexColors": {
+      "label": "Vertex color del terreno",
+      "help": "Rimuove la colorazione dei vertex color incorporata nei record del terreno (LAND), così da renderizzarli in modo autonomo invece di trascinare una gradazione di colore pensata per un altro aspetto.",
+      "none": "Non toccare i vertex color del terreno",
+      "all": "Rimuovi su tutto il terreno",
+      "snow": "Rimuovi solo dove viene usata una texture classificata come neve"
+    },
+    "meshVertexColors": {
+      "label": "Colori vertice delle mesh",
+      "help": "Rimuove la tinta dei colori vertice incorporata nelle mesh della cartella landscape (rocce, scogliere, iceberg, ...), incluse le varianti DLC sotto DLC01\\Landscape\\, DLC02\\Landscape\\, ecc.",
+      "none": "Non toccare i colori vertice delle mesh",
+      "snowOnly": "Solo sulle mesh di neve generate",
+      "all": "Su tutte le mesh di landscape, incluse le originali non di neve"
+    },
+    "collisionMaterial": {
+      "label": "Materiale di Collisione (Suoni dei Passi)",
+      "help": "Rimappa i materiali di collisione delle mesh di neve generate verso il loro equivalente di neve (attualmente solo Terra/Erba -> Neve) affinché il suono dei passi corrisponda all'aspetto innevato. Funziona per chunk di collisione, quindi i materiali non correlati nella stessa mesh non vengono toccati.",
+      "none": "Non toccare i materiali di collisione",
+      "snowOnly": "Applica sulle mesh di neve generate"
+    },
+    "meshBlacklist": {
+      "label": "Lista nera delle mesh",
+      "help": "Le mesh che corrispondono a una regola qui non vengono mai duplicate né patchate. Caratteri jolly (*) consentiti, es. \"*\\trees\\*\". Clic destro per aggiungere/rimuovere righe.",
+      "column": "Regola"
+    },
+    "editorIdKeywords": {
+      "label": "Parole chiave EditorID in lista nera",
+      "help": "I record il cui EditorID contiene una di queste parole (senza distinzione tra maiuscole/minuscole) vengono saltati del tutto - utile per escludere falsi positivi. Clic destro per aggiungere/rimuovere righe.",
+      "column": "Parola chiave"
+    },
+    "dirtCliffsSnowVariant": {
+      "label": "Variante Neve di DirtCliffsRoots",
+      "checkbox": "Genera una variante innevata della texture DirtCliffsRoots01",
+      "help": "Genera il/i file di texture e li applica alla parte \"Skirt\" delle mesh DirtCliffs generate."
+    },
+    "tab": {
+      "general": "Generale",
+      "options": "Opzioni"
+    },
+    "language": {
+      "label": "Lingua"
+    },
+    "theme": {
+      "label": "Tema",
+      "system": "Sistema",
+      "light": "Chiaro",
+      "dark": "Scuro"
+    },
+    "startButton": "Avvia",
+    "missingGameLocation": {
+      "message": "Seleziona la posizione di installazione del tuo gioco.",
+      "title": "Posizione del gioco mancante"
+    },
+    "missingOutputLocation": {
+      "message": "Seleziona una cartella di output.",
+      "title": "Cartella di output mancante"
+    },
+    "missingMo2Instance": {
+      "message": "Seleziona la cartella della tua istanza di Mod Organizer 2.",
+      "title": "Istanza MO2 mancante"
+    }
+  },
+  "progress": {
+    "starting": "Avvio...",
+    "showDetails": "Mostra dettagli",
+    "working": "In corso...",
+    "done": "Completato.",
+    "failed": "Fallito - vedi i dettagli sotto.",
+    "doneClose": "Completato - Chiudi",
+    "failedClose": "Fallito - Chiudi",
+    "completion": {
+      "message": "Generazione completata. Non dimenticare di attivare il plugin di output di Snow Fixer nell'elenco dei plugin del tuo mod manager, se non è già attivo.",
+      "title": "Snow Fixer"
+    }
+  }
+}

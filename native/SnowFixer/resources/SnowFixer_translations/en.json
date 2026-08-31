@@ -1,0 +1,101 @@
+{
+  "_language": "English",
+  "common": {
+    "browse": "Browse",
+    "cancel": "Cancel"
+  },
+  "launcher": {
+    "intro": "Scans the vanilla Skyrim SE Data folder for every record whose EditorID or mesh path mentions snow, duplicates the winning mesh for each one, and writes a plugin pointing at the duplicates - so they stay freely editable without touching any original asset.",
+    "gameLocation": {
+      "label": "Game Location",
+      "dialogTitle": "Select Game Location"
+    },
+    "outputLocation": {
+      "label": "Output Location",
+      "dialogTitle": "Select Output Location"
+    },
+    "modManager": {
+      "label": "Mod Manager",
+      "none": "None / Vortex",
+      "mo2": "Mod Organizer 2"
+    },
+    "mo2InstancePath": {
+      "label": "MO2 Instance Path",
+      "dialogTitle": "Select MO2 Instance Folder"
+    },
+    "landscapeVertexColors": {
+      "label": "Landscape Vertex Colors",
+      "help": "Clears baked-in vertex color tinting on terrain (LAND) records, so they render standalone instead of carrying leftover color grading meant for a different look.",
+      "none": "Don't touch landscape vertex colors",
+      "all": "Clear on all terrain",
+      "snow": "Clear only where a snow-classified texture is used"
+    },
+    "meshVertexColors": {
+      "label": "Mesh Vertex Colors",
+      "help": "Clears baked-in vertex color tinting on landscape-folder meshes (rocks, cliffs, icebergs, ...), including DLC variants under DLC01\\Landscape\\, DLC02\\Landscape\\, etc.",
+      "none": "Don't touch mesh vertex colors",
+      "snowOnly": "Only on the generated snow meshes",
+      "all": "On all landscape meshes, including non-snow originals"
+    },
+    "collisionMaterial": {
+      "label": "Collision Material (Footstep Sounds)",
+      "help": "Remaps collision materials on the generated snow meshes toward their snow equivalent (currently just Dirt/Grass -> Snow) so footstep sounds match the snowy visual. Works per collision chunk, so unrelated materials in the same mesh are left alone.",
+      "none": "Don't touch collision materials",
+      "snowOnly": "Apply on the generated snow meshes"
+    },
+    "meshBlacklist": {
+      "label": "Mesh Blacklist",
+      "help": "Meshes matching a rule here are never duplicated or patched. Wildcards (*) allowed, e.g. \"*\\trees\\*\". Right click to add/remove rows.",
+      "column": "Rule"
+    },
+    "editorIdKeywords": {
+      "label": "EditorID Blacklist Keywords",
+      "help": "Records whose EditorID contains one of these words (case-insensitive) are skipped entirely - useful for excluding false-positive matches. Right click to add/remove rows.",
+      "column": "Keyword"
+    },
+    "dirtCliffsSnowVariant": {
+      "label": "DirtCliffsRoots Snow Variant",
+      "checkbox": "Generate a snow variant of DirtCliffsRoots01 texture",
+      "help": "Generates the texture file(s) and applies them to the \"Skirt\" part of the generated DirtCliffs meshes."
+    },
+    "tab": {
+      "general": "General",
+      "options": "Options"
+    },
+    "language": {
+      "label": "Language"
+    },
+    "theme": {
+      "label": "Theme",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "startButton": "Start",
+    "missingGameLocation": {
+      "message": "Please select your game's install location.",
+      "title": "Missing Game Location"
+    },
+    "missingOutputLocation": {
+      "message": "Please select an output location.",
+      "title": "Missing Output Location"
+    },
+    "missingMo2Instance": {
+      "message": "Please select your Mod Organizer 2 instance folder.",
+      "title": "Missing MO2 Instance"
+    }
+  },
+  "progress": {
+    "starting": "Starting...",
+    "showDetails": "Show details",
+    "working": "Working...",
+    "done": "Done.",
+    "failed": "Failed - see details below.",
+    "doneClose": "Done - Close",
+    "failedClose": "Failed - Close",
+    "completion": {
+      "message": "Generation complete. Don't forget to enable Snow Fixer's output plugin in your mod manager's plugin list if it isn't already active.",
+      "title": "Snow Fixer"
+    }
+  }
+}

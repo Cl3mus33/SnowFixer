@@ -1,0 +1,101 @@
+{
+  "_language": "Deutsch",
+  "common": {
+    "browse": "Durchsuchen",
+    "cancel": "Abbrechen"
+  },
+  "launcher": {
+    "intro": "Durchsucht den Vanilla-Skyrim-SE-Data-Ordner nach jedem Datensatz, dessen EditorID oder Mesh-Pfad \"snow\" enthält, dupliziert das gewinnende Mesh für jeden davon und schreibt ein Plugin, das auf die Duplikate zeigt - so bleiben sie frei bearbeitbar, ohne die Originaldateien zu berühren.",
+    "gameLocation": {
+      "label": "Spielort",
+      "dialogTitle": "Spielort auswählen"
+    },
+    "outputLocation": {
+      "label": "Ausgabeordner",
+      "dialogTitle": "Ausgabeordner auswählen"
+    },
+    "modManager": {
+      "label": "Mod-Manager",
+      "none": "Keiner / Vortex",
+      "mo2": "Mod Organizer 2"
+    },
+    "mo2InstancePath": {
+      "label": "MO2-Instanzpfad",
+      "dialogTitle": "MO2-Instanzordner auswählen"
+    },
+    "landscapeVertexColors": {
+      "label": "Vertex-Farben des Geländes",
+      "help": "Entfernt eingebackene Vertex-Farbtönungen bei Terrain-Datensätzen (LAND), damit sie eigenständig gerendert werden, statt eine für einen anderen Look gedachte Farbabstufung mitzuschleppen.",
+      "none": "Vertex-Farben des Geländes nicht anfassen",
+      "all": "Auf dem gesamten Gelände entfernen",
+      "snow": "Nur entfernen, wo eine als Schnee klassifizierte Textur verwendet wird"
+    },
+    "meshVertexColors": {
+      "label": "Mesh-Vertexfarben",
+      "help": "Entfernt eingebrannte Vertexfarben-Tönung auf Meshes im Landscape-Ordner (Felsen, Klippen, Eisberge, ...), einschließlich DLC-Varianten unter DLC01\\Landscape\\, DLC02\\Landscape\\ usw.",
+      "none": "Mesh-Vertexfarben nicht anfassen",
+      "snowOnly": "Nur bei den generierten Schnee-Meshes",
+      "all": "Bei allen Landscape-Meshes, einschließlich der ursprünglichen Nicht-Schnee-Meshes"
+    },
+    "collisionMaterial": {
+      "label": "Kollisionsmaterial (Schrittgeräusche)",
+      "help": "Ordnet Kollisionsmaterialien der generierten Schnee-Meshes ihrem Schnee-Äquivalent zu (aktuell nur Dirt/Gras -> Schnee), damit die Schrittgeräusche zum verschneiten Aussehen passen. Funktioniert pro Kollisions-Chunk, sodass unbeteiligte Materialien im selben Mesh unangetastet bleiben.",
+      "none": "Kollisionsmaterialien nicht anfassen",
+      "snowOnly": "Bei den generierten Schnee-Meshes anwenden"
+    },
+    "meshBlacklist": {
+      "label": "Mesh-Sperrliste",
+      "help": "Meshes, die hier auf eine Regel passen, werden nie dupliziert oder gepatcht. Platzhalter (*) erlaubt, z. B. \"*\\trees\\*\". Rechtsklick zum Hinzufügen/Entfernen von Zeilen.",
+      "column": "Regel"
+    },
+    "editorIdKeywords": {
+      "label": "EditorID-Sperrlisten-Schlüsselwörter",
+      "help": "Datensätze, deren EditorID eines dieser Wörter enthält (Groß-/Kleinschreibung wird ignoriert), werden komplett übersprungen - nützlich, um Fehltreffer auszuschließen. Rechtsklick zum Hinzufügen/Entfernen von Zeilen.",
+      "column": "Schlüsselwort"
+    },
+    "dirtCliffsSnowVariant": {
+      "label": "DirtCliffsRoots Schnee-Variante",
+      "checkbox": "Eine Schnee-Variante der DirtCliffsRoots01-Textur generieren",
+      "help": "Erzeugt die Textur-Datei(en) und wendet sie auf den „Skirt“-Teil der generierten DirtCliffs-Meshes an."
+    },
+    "tab": {
+      "general": "Allgemein",
+      "options": "Optionen"
+    },
+    "language": {
+      "label": "Sprache"
+    },
+    "theme": {
+      "label": "Design",
+      "system": "System",
+      "light": "Hell",
+      "dark": "Dunkel"
+    },
+    "startButton": "Starten",
+    "missingGameLocation": {
+      "message": "Bitte wählen Sie den Installationsort Ihres Spiels aus.",
+      "title": "Spielort fehlt"
+    },
+    "missingOutputLocation": {
+      "message": "Bitte wählen Sie einen Ausgabeordner aus.",
+      "title": "Ausgabeordner fehlt"
+    },
+    "missingMo2Instance": {
+      "message": "Bitte wählen Sie den Ordner Ihrer Mod-Organizer-2-Instanz aus.",
+      "title": "MO2-Instanz fehlt"
+    }
+  },
+  "progress": {
+    "starting": "Wird gestartet...",
+    "showDetails": "Details anzeigen",
+    "working": "Wird verarbeitet...",
+    "done": "Fertig.",
+    "failed": "Fehlgeschlagen - siehe Details unten.",
+    "doneClose": "Fertig - Schließen",
+    "failedClose": "Fehlgeschlagen - Schließen",
+    "completion": {
+      "message": "Generierung abgeschlossen. Vergessen Sie nicht, das Ausgabe-Plugin von Snow Fixer in der Plugin-Liste Ihres Mod-Managers zu aktivieren, falls es noch nicht aktiv ist.",
+      "title": "Snow Fixer"
+    }
+  }
+}

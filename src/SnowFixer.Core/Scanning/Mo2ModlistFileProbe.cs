@@ -1,0 +1,50 @@
+using Mutagen.Bethesda;
+
+namespace SnowFixer.Core.Scanning;
+
+/// <summary>
+/// Layers a Mod Organizer 2 instance's virtual file system without needing to actually run
+/// through MO2, using <see cref="Mo2InstanceReader"/> for the overwrite/mod-priority resolution
+/// (loose files, then each mod's own BSA/BA2 archives), and falling back to the real game Data
+/// folder (loose + BSA/BA2) for anything no mod provides.
+/// </summary>
+public sealed class Mo2ModlistFileProbe : IGameFileProbe
+{
+    private readonly Mo2InstanceReader _reader;
+    private readonly ArchiveAwareFileProbe _vanillaProbe;
+
+    public Mo2ModlistFileProbe(Mo2InstanceReader reader, string dataFolder, GameRelease gameRelease)
+    {
+        _reader = reader;
+        _vanillaProbe = new ArchiveAwareFileProbe(dataFolder, gameRelease);
+    }
+
+    public bool Exists(string relativeDataPath) =>
+        _reader.ExistsLooseOrArchived(relativeDataPath) || _vanillaProbe.Exists(relativeDataPath);
+
+    public Stream OpenRead(string relativeDataPath) =>
+        _reader.TryResolveLooseOrArchived(relativeDataPath, out var stream) ? stream : _vanillaProbe.OpenRead(relativeDataPath);
+
+    public IEnumerable<string> EnumerateFiles(string relativeFolder, string extension)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var relativePath in _reader.EnumerateLooseFiles(relativeFolder, extension))
+        {
+            if (seen.Add(relativePath))
+            {
+                yield return relativePath;
+            }
+        }
+
+        foreach (var relativePath in _vanillaProbe.EnumerateFiles(relativeFolder, extension))
+        {
+            if (seen.Add(relativePath))
+            {
+                yield return relativePath;
+            }
+        }
+    }
+
+    public void Dispose() => _vanillaProbe.Dispose();
+}

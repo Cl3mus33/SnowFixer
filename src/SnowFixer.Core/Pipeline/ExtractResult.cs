@@ -1,0 +1,17 @@
+namespace SnowFixer.Core.Pipeline;
+
+public sealed record ExtractResult(
+    int RecordsMatched,
+    int MeshesDuplicated,
+    int MeshesFailed,
+    int AlternateTexturesBaked,
+    int AlternateTexturesFailed,
+    int ShaderFlagsPatched,
+    int VertexColorsNeutralized,
+    int CollisionMaterialsRemapped,
+    int DirtCliffsSkirtShapesRetextured,
+    int NonSnowLandscapeMeshesIncluded,
+    int LandscapesPatched,
+    bool DirtCliffsSnowVariantGenerated,
+    IReadOnlyList<string> Diagnostics,
+    string? OutputEspPath);
