@@ -106,8 +106,25 @@ public sealed class ExtractOrchestrator
 
         Report("Loading game environment...");
 
-        using var mo2Reader = _settings.ModManager == ModManagerType.ModOrganizer2
-            ? new Mo2InstanceReader(_settings.Mo2InstancePath, _settings.Mo2ProfileName, GameRelease.SkyrimSE)
+        string? mo2ProfileName = null;
+        if (_settings.ModManager == ModManagerType.ModOrganizer2)
+        {
+            mo2ProfileName = _settings.Mo2ProfileName;
+            if (string.IsNullOrWhiteSpace(mo2ProfileName))
+            {
+                if (!Mo2InstanceReader.TryDetectSelectedProfile(_settings.Mo2InstancePath, out var detectedProfile))
+                {
+                    throw new InvalidOperationException(
+                        $"No MO2 profile was selected and ModOrganizer.ini did not identify one. " +
+                        $"Select a profile in the launcher or set selected_profile in '{Path.Combine(_settings.Mo2InstancePath, "ModOrganizer.ini")}'.");
+                }
+
+                mo2ProfileName = detectedProfile;
+            }
+        }
+
+        using var mo2Reader = mo2ProfileName is not null
+            ? new Mo2InstanceReader(_settings.Mo2InstancePath, mo2ProfileName, GameRelease.SkyrimSE)
             : null;
 
         // Mutagen loads every plugin from one physical Data folder — it has no notion of MO2's
@@ -117,7 +134,7 @@ public sealed class ExtractOrchestrator
         // actually shows in-game. Meshes/textures are NOT materialized — those stay served live
         // through Mo2ModlistFileProbe.
         using var materializedLoadOrder = mo2Reader is not null
-            ? Mo2LoadOrderMaterializer.Materialize(mo2Reader, _settings.Mo2ProfileName, _dataFolder, _diagnostics)
+            ? Mo2LoadOrderMaterializer.Materialize(mo2Reader, mo2ProfileName!, _dataFolder, _diagnostics)
             : null;
 
         var envDataFolder = materializedLoadOrder?.DataFolder ?? _dataFolder;

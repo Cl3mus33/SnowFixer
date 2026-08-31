@@ -40,7 +40,8 @@ The actual scanning/patching logic lives in **`src/SnowFixer.Core`** (C#, built 
 ## Installation
 
 1. Download the latest release and install it like any other mod (MO2: as a regular mod).
-2. Point it at your game install, your mod manager (if any), and an output folder.
+2. Point it at your game install, your mod manager (if any), and an output folder. When using MO2,
+   choose the instance and the profile whose `modlist.txt`/`plugins.txt` should be scanned.
 3. Run it, then enable the generated output plugin in your mod manager.
 
 Supports Skyrim Special Edition.

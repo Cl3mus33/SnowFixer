@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using SnowFixer.Core.Configuration;
 using SnowFixer.Core.Pipeline;
+using SnowFixer.Core.Scanning;
 
 namespace SnowFixer.NativeExport;
 
@@ -12,8 +13,9 @@ namespace SnowFixer.NativeExport;
 /// here, in-process, on a background Task; the native side polls <see cref="GetProgress"/> instead
 /// of receiving a callback, since a callback crossing the native boundary while a background .NET
 /// Task is mid-flight is far more fragile than polling a tiny status blob every ~150ms. Mirrors
-/// AutoBlend.NativeExport.Exports 1:1 (same pattern, no mod-manager-detection export since
-/// SnowFixer has no MO2 concept - it reads the vanilla Data folder directly).
+/// AutoBlend.NativeExport.Exports 1:1. In addition to the extraction bridge, the native launcher
+/// asks this assembly to discover valid MO2 profiles so the UI and backend use the same
+/// base_directory/profile parsing rules.
 ///
 /// Settings load/save is deliberately NOT exposed here - the native shell's SFConfig reads/writes
 /// %APPDATA%\SnowFixer\settings.json directly (mirroring
@@ -92,6 +94,31 @@ public static class Exports
                 state.IsDone = true;
             }
         });
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "get_mo2_profiles")]
+    public static IntPtr GetMo2Profiles(IntPtr instancePathPtr)
+    {
+        var instancePath = Marshal.PtrToStringUTF8(instancePathPtr) ?? string.Empty;
+        try
+        {
+            var discovery = Mo2InstanceReader.DiscoverProfiles(instancePath);
+            return ToNativeUtf8(JsonSerializer.Serialize(new
+            {
+                Profiles = discovery.Profiles,
+                discovery.SelectedProfile,
+                ErrorMessage = (string?)null,
+            }));
+        }
+        catch (Exception ex)
+        {
+            return ToNativeUtf8(JsonSerializer.Serialize(new
+            {
+                Profiles = Array.Empty<string>(),
+                SelectedProfile = (string?)null,
+                ErrorMessage = ex.Message,
+            }));
+        }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "get_progress")]

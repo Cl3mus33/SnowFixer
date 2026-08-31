@@ -38,7 +38,7 @@ target_link_libraries(${EXE_NAME} PRIVATE
 #
 # The whole Mutagen/niflysharp extraction pipeline lives in SnowFixer.Core (C#) - this
 # executable never touches a NIF or an ESP directly. DNNE turns SnowFixer.NativeExport's
-# [UnmanagedCallersOnly] exports (Exports.cs: start_extract_run/get_progress/free_string) into a
+# [UnmanagedCallersOnly] exports (Exports.cs: start_extract_run/get_mo2_profiles/get_progress/free_string) into a
 # native shim (SnowFixer.NativeExportNE.lib/.dll/.h) this executable links against and
 # delay-loads - the exact same pattern AutoBlend's own native/AutoBlend/CMakeLists.txt uses for its
 # AutoBlend.NativeExport bridge.

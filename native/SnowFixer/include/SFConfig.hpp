@@ -65,9 +65,10 @@ struct SFParams {
     /// mo2InstancePath to reconstruct MO2's own virtual file system).
     SFModManagerType modManager = SFModManagerType::None;
     std::wstring mo2InstancePath;
-    /// @brief Not user-editable in this shell - always "Default", matching AutoBlend's own native
-    /// shell (which likewise never exposes a profile picker).
-    std::wstring mo2ProfileName = L"Default";
+    /// @brief MO2 profile whose modlist.txt/plugins.txt should be layered. The launcher populates
+    /// this from the instance's valid profiles; an empty value lets the managed backend fall back
+    /// to MO2's selected_profile setting for older callers/config files.
+    std::wstring mo2ProfileName;
 
     /// @brief Meshes matching any wildcard rule here are never duplicated/patched. Defaults to the
     /// single rule Snow Fixer used to hardcode (tree debris meshes living under the same
