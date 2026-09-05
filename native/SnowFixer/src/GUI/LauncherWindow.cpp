@@ -2,6 +2,10 @@
 
 #include "SFLocale.hpp"
 #include "GUI/components/PGCustomListctrlChangedEvent.hpp"
+#include "util/StringUtil.hpp"
+
+#include <SnowFixer.NativeExportNE.h>
+#include <nlohmann/json.hpp>
 
 #include <wx/notebook.h>
 #include <wx/statline.h>
@@ -15,6 +19,12 @@ constexpr int BORDER_SIZE = 5;
 const wxColour ACCENT_DARK(15, 46, 76); // header banner background
 const wxColour ACCENT(30, 111, 168); // primary button, section label text
 const wxColour ACCENT_TEXT(255, 255, 255); // text on top of ACCENT_DARK/ACCENT
+
+auto toIntPtr(const string& utf8) -> intptr_t { return reinterpret_cast<intptr_t>(utf8.c_str()); }
+auto fromIntPtr(intptr_t ptr) -> string
+{
+    return ptr == 0 ? string {} : string(reinterpret_cast<const char*>(ptr));
+}
 
 auto makeSectionLabel(wxWindow* parent, const wxString& text) -> wxStaticText*
 {
@@ -115,6 +125,7 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     generalSizer->Add(m_mo2InstancePathLabel, 0, wxLEFT | wxRIGHT | wxTOP, BORDER_SIZE);
 
     m_mo2InstancePathTextbox = new wxTextCtrl(generalPanel, wxID_ANY, initParams.mo2InstancePath);
+    m_mo2InstancePathTextbox->Bind(wxEVT_TEXT, &LauncherWindow::onMo2InstancePathChanged, this);
     m_mo2InstanceBrowseButton = new wxButton(generalPanel, wxID_ANY, SFTr("common.browse", "Browse"));
     m_mo2InstanceBrowseButton->Bind(wxEVT_BUTTON, &LauncherWindow::onBrowseMo2Instance, this);
 
@@ -123,7 +134,16 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     mo2InstanceSizer->Add(m_mo2InstanceBrowseButton, 0, wxALL, BORDER_SIZE);
     generalSizer->Add(mo2InstanceSizer, 0, wxEXPAND);
 
+    m_mo2ProfileLabel = makeSectionLabel(generalPanel, SFTr("launcher.mo2Profile.label", "MO2 Profile"));
+    generalSizer->Add(m_mo2ProfileLabel, 0, wxLEFT | wxRIGHT | wxTOP, BORDER_SIZE);
+    m_mo2ProfileChoice = new wxChoice(generalPanel, wxID_ANY);
+    generalSizer->Add(m_mo2ProfileChoice, 0, wxEXPAND | wxALL, BORDER_SIZE);
+
     updateMo2FieldState();
+    refreshMo2Profiles();
+    if (!initParams.mo2ProfileName.empty()) {
+        m_mo2ProfileChoice->SetStringSelection(wxString(initParams.mo2ProfileName));
+    }
 
     // Landscape vertex color mode - entirely separate feature from the mesh duplication above (LAND
     // terrain records have no NIF/Model.File at all), so it's its own section rather than tucked
@@ -435,8 +455,9 @@ void LauncherWindow::getParams(SFParams& outParams) const
     outParams.modManager
         = m_modManagerChoice->GetSelection() == 1 ? SFModManagerType::ModOrganizer2 : SFModManagerType::None;
     outParams.mo2InstancePath = m_mo2InstancePathTextbox->GetValue().ToStdWstring();
-    // mo2ProfileName is intentionally not editable here - always "Default", matching AutoBlend's
-    // own native shell (see SFConfig.hpp's doc comment on the field).
+    outParams.mo2ProfileName = m_mo2ProfileChoice->GetSelection() == wxNOT_FOUND
+        ? wstring {}
+        : m_mo2ProfileChoice->GetStringSelection().ToStdWstring();
 
     if (m_meshVertexColorModeAllRadio->GetValue()) {
         outParams.meshVertexColorMode = SFMeshVertexColorMode::All;
@@ -524,7 +545,13 @@ void LauncherWindow::onBrowseOutputLocation([[maybe_unused]] wxCommandEvent& eve
     }
 }
 
-void LauncherWindow::onModManagerChanged([[maybe_unused]] wxCommandEvent& event) { updateMo2FieldState(); }
+void LauncherWindow::onModManagerChanged([[maybe_unused]] wxCommandEvent& event)
+{
+    updateMo2FieldState();
+    if (m_modManagerChoice->GetSelection() == 1) {
+        refreshMo2Profiles();
+    }
+}
 
 void LauncherWindow::updateMo2FieldState()
 {
@@ -532,6 +559,8 @@ void LauncherWindow::updateMo2FieldState()
     m_mo2InstancePathLabel->Enable(isMo2);
     m_mo2InstancePathTextbox->Enable(isMo2);
     m_mo2InstanceBrowseButton->Enable(isMo2);
+    m_mo2ProfileLabel->Enable(isMo2);
+    m_mo2ProfileChoice->Enable(isMo2);
 }
 
 void LauncherWindow::onBrowseMo2Instance([[maybe_unused]] wxCommandEvent& event)
@@ -540,7 +569,55 @@ void LauncherWindow::onBrowseMo2Instance([[maybe_unused]] wxCommandEvent& event)
         this, SFTr("launcher.mo2InstancePath.dialogTitle", "Select MO2 Instance Folder"), m_mo2InstancePathTextbox->GetValue());
     if (dialog.ShowModal() == wxID_OK) {
         m_mo2InstancePathTextbox->SetValue(dialog.GetPath());
+        refreshMo2Profiles();
     }
+}
+
+void LauncherWindow::onMo2InstancePathChanged([[maybe_unused]] wxCommandEvent& event) { refreshMo2Profiles(); }
+
+void LauncherWindow::refreshMo2Profiles()
+{
+    if (m_mo2ProfileChoice == nullptr) {
+        return;
+    }
+
+    const auto previousSelection = m_mo2ProfileChoice->GetStringSelection().ToStdWstring();
+    const auto instancePath = m_mo2InstancePathTextbox->GetValue().ToStdWstring();
+    m_mo2ProfileChoice->Clear();
+    if (instancePath.empty()) {
+        updateMo2FieldState();
+        return;
+    }
+
+    const auto instancePathUtf8 = StringUtil::utf16toUTF8(instancePath);
+    const auto rawPtr = get_mo2_profiles(toIntPtr(instancePathUtf8));
+    const auto jsonText = fromIntPtr(rawPtr);
+    if (rawPtr != 0) {
+        free_string(rawPtr);
+    }
+
+    try {
+        const auto response = nlohmann::json::parse(jsonText);
+        if (response.contains("Profiles") && response["Profiles"].is_array()) {
+            for (const auto& profile : response["Profiles"]) {
+                m_mo2ProfileChoice->Append(wxString::FromUTF8(profile.get<string>()));
+            }
+        }
+
+        string selected;
+        if (response.contains("SelectedProfile") && !response["SelectedProfile"].is_null()) {
+            selected = response["SelectedProfile"].get<string>();
+        }
+        const auto preferred = !previousSelection.empty() ? previousSelection : StringUtil::utf8toUTF16(selected);
+        if (!preferred.empty() && m_mo2ProfileChoice->SetStringSelection(wxString(preferred))) {
+            // Preserve the user's explicit choice when the textbox emits another change event.
+        } else if (m_mo2ProfileChoice->GetCount() > 0) {
+            m_mo2ProfileChoice->SetSelection(0);
+        }
+    } catch (const exception&) {
+        // An invalid path simply leaves an empty picker; Start reports the actionable error.
+    }
+    updateMo2FieldState();
 }
 
 void LauncherWindow::updateListColumnWidths()
@@ -586,6 +663,13 @@ void LauncherWindow::onOkButtonPressed([[maybe_unused]] wxCommandEvent& event)
     if (m_modManagerChoice->GetSelection() == 1 && m_mo2InstancePathTextbox->GetValue().IsEmpty()) {
         wxMessageBox(SFTr("launcher.missingMo2Instance.message", "Please select your Mod Organizer 2 instance folder."),
             SFTr("launcher.missingMo2Instance.title", "Missing MO2 Instance"), wxOK | wxICON_WARNING, this);
+        return;
+    }
+
+    if (m_modManagerChoice->GetSelection() == 1 && m_mo2ProfileChoice->GetSelection() == wxNOT_FOUND) {
+        wxMessageBox("No usable MO2 profiles were found in the selected instance. Please choose an "
+                     "instance containing profiles with modlist.txt.",
+            "Missing MO2 Profile", wxOK | wxICON_WARNING, this);
         return;
     }
 

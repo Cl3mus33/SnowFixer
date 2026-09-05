@@ -56,8 +56,9 @@ public sealed class ExtractSettings
     public string Mo2InstancePath { get; set; } = string.Empty;
 
     /// <summary>The MO2 profile to read modlist.txt/plugins.txt from - only used when
-    /// <see cref="ModManager"/> is ModOrganizer2.</summary>
-    public string Mo2ProfileName { get; set; } = "Default";
+    /// <see cref="ModManager"/> is ModOrganizer2. An empty value means use MO2's currently
+    /// selected profile (the native launcher normally writes the explicit picker value).</summary>
+    public string Mo2ProfileName { get; set; } = string.Empty;
 
     /// <summary>Wildcard path patterns (e.g. "*\effects\*"). A record whose mesh path matches one
     /// of these is skipped entirely, even if it would otherwise match the snow-detection criteria -

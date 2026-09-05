@@ -18,6 +18,11 @@ namespace SnowFixer.Core.Scanning;
 /// </summary>
 public sealed class Mo2InstanceReader : IDisposable
 {
+    /// <summary>Profiles that MO2 can actually use for a load order. A directory is listed only
+    /// when it contains modlist.txt, since an arbitrary folder under profiles is not a runnable
+    /// MO2 profile.</summary>
+    public sealed record ProfileDiscovery(IReadOnlyList<string> Profiles, string? SelectedProfile);
+
     /// <summary>The path the user gave us — MO2's own notion of "the instance" (where
     /// ModOrganizer.ini lives). For a "global" instance this is under %LOCALAPPDATA%\ModOrganizer\
     /// and does NOT necessarily contain mods/profiles/overwrite itself — see <see cref="DataRoot"/>.</summary>
@@ -361,6 +366,34 @@ public sealed class Mo2InstanceReader : IDisposable
 
         profileName = string.Empty;
         return false;
+    }
+
+    /// <summary>Discovers the usable profiles for an instance and the profile MO2 currently has
+    /// selected. The selected value is returned only when it corresponds to a profile containing
+    /// modlist.txt; this keeps the native picker from offering a stale/incomplete profile name.</summary>
+    public static ProfileDiscovery DiscoverProfiles(string instancePath)
+    {
+        var dataRoot = ResolveDataRoot(instancePath);
+        var profilesRoot = Path.Combine(dataRoot, "profiles");
+        if (!Directory.Exists(profilesRoot))
+        {
+            return new ProfileDiscovery(Array.Empty<string>(), null);
+        }
+
+        var profiles = Directory.EnumerateDirectories(profilesRoot)
+            .Where(path => File.Exists(Path.Combine(path, "modlist.txt")))
+            .Select(Path.GetFileName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Cast<string>()
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var selectedProfile = TryDetectSelectedProfile(instancePath, out var selected)
+            && profiles.Contains(selected, StringComparer.OrdinalIgnoreCase)
+            ? profiles.First(name => string.Equals(name, selected, StringComparison.OrdinalIgnoreCase))
+            : null;
+
+        return new ProfileDiscovery(profiles, selectedProfile);
     }
 
     private static List<string> ParseEnabledMods(string modlistPath)

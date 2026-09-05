@@ -114,6 +114,7 @@ ProgressWindow::ProgressWindow(const SFParams& params, const filesystem::path& /
         string lastStatus;
         bool success = true;
         wxString failureDetail;
+        wxString failureDetails;
         string resultJson;
 
         while (!m_stopRequested.load()) {
@@ -132,6 +133,7 @@ ProgressWindow::ProgressWindow(const SFParams& params, const filesystem::path& /
                 const auto isDone = snapshot.value("IsDone", false);
                 const auto isFailed = snapshot.value("IsFailed", false);
                 const auto errorMessage = readOptionalString(snapshot, "ErrorMessage");
+                const auto errorDetails = readOptionalString(snapshot, "ErrorDetails");
 
                 if (status != lastStatus && !status.empty()) {
                     lastStatus = status;
@@ -146,6 +148,7 @@ ProgressWindow::ProgressWindow(const SFParams& params, const filesystem::path& /
                 if (isDone) {
                     success = !isFailed;
                     failureDetail = wxString::FromUTF8(errorMessage);
+                    failureDetails = wxString::FromUTF8(errorDetails);
                     resultJson = readOptionalString(snapshot, "ResultJson");
                     break;
                 }
@@ -160,7 +163,9 @@ ProgressWindow::ProgressWindow(const SFParams& params, const filesystem::path& /
             this_thread::sleep_for(chrono::milliseconds(POLL_INTERVAL_MS));
         }
 
-        wxTheApp->CallAfter([this, success, failureDetail, resultJson]() -> void { onWorkerFinished(success, failureDetail, resultJson); });
+        wxTheApp->CallAfter([this, success, failureDetail, failureDetails, resultJson]() -> void {
+            onWorkerFinished(success, failureDetail, failureDetails, resultJson);
+        });
     });
 }
 
@@ -197,7 +202,8 @@ void ProgressWindow::applySnapshot(const wxString& status, int current, int tota
     m_progressGauge->SetValue(pct);
 }
 
-void ProgressWindow::onWorkerFinished(bool success, const wxString& failureDetail, const string& resultJson)
+void ProgressWindow::onWorkerFinished(
+    bool success, const wxString& failureDetail, const wxString& failureDetails, const string& resultJson)
 {
     m_pulseTimer.Stop();
     m_progressGauge->SetValue(100);
@@ -218,6 +224,7 @@ void ProgressWindow::onWorkerFinished(bool success, const wxString& failureDetai
             summary << "Records matched: " << result.value("RecordsMatched", 0) << "\n";
             summary << "Meshes duplicated: " << result.value("MeshesDuplicated", 0) << "\n";
             summary << "Meshes failed to resolve: " << result.value("MeshesFailed", 0) << "\n";
+            summary << "Malformed records skipped: " << result.value("MalformedRecordsSkipped", 0) << "\n";
             summary << "Alternate Textures baked: " << result.value("AlternateTexturesBaked", 0) << "\n";
             summary << "Alternate Textures that couldn't be baked: " << result.value("AlternateTexturesFailed", 0) << "\n";
             summary << "Meshes with ZBuffer_Write/No_Fade shader flag fixups: " << result.value("ShaderFlagsPatched", 0) << "\n";
@@ -243,6 +250,9 @@ void ProgressWindow::onWorkerFinished(bool success, const wxString& failureDetai
     if (!success || diagnosticCount > 0) {
         if (!failureDetail.IsEmpty()) {
             appendLog("\n[ERROR] " + failureDetail + "\n");
+        }
+        if (!failureDetails.IsEmpty() && failureDetails != failureDetail) {
+            appendLog("\n[ERROR DETAILS]\n" + failureDetails + "\n");
         }
         if (!m_detailsPane->IsExpanded()) {
             m_detailsPane->Expand();

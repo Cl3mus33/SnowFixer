@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using SnowFixer.Core.Configuration;
 using SnowFixer.Core.Pipeline;
+using SnowFixer.Core.Scanning;
 
 namespace SnowFixer.NativeExport;
 
@@ -12,8 +13,9 @@ namespace SnowFixer.NativeExport;
 /// here, in-process, on a background Task; the native side polls <see cref="GetProgress"/> instead
 /// of receiving a callback, since a callback crossing the native boundary while a background .NET
 /// Task is mid-flight is far more fragile than polling a tiny status blob every ~150ms. Mirrors
-/// AutoBlend.NativeExport.Exports 1:1 (same pattern, no mod-manager-detection export since
-/// SnowFixer has no MO2 concept - it reads the vanilla Data folder directly).
+/// AutoBlend.NativeExport.Exports 1:1. In addition to the extraction bridge, the native launcher
+/// asks this assembly to discover valid MO2 profiles so the UI and backend use the same
+/// base_directory/profile parsing rules.
 ///
 /// Settings load/save is deliberately NOT exposed here - the native shell's SFConfig reads/writes
 /// %APPDATA%\SnowFixer\settings.json directly (mirroring
@@ -33,6 +35,10 @@ public static class Exports
         public bool IsFailed;
         public string? ResultJson;
         public string? ErrorMessage;
+        /// <summary>Full exception.ToString() for fatal errors; kept separate from the concise
+        /// message so the native progress window can show actionable details without changing its
+        /// status line.</summary>
+        public string? ErrorDetails;
     }
 
     [UnmanagedCallersOnly(EntryPoint = "start_extract_run")]
@@ -60,6 +66,7 @@ public static class Exports
                 IsDone = true,
                 IsFailed = true,
                 ErrorMessage = ex.Message,
+                ErrorDetails = ex.ToString(),
             };
             return;
         }
@@ -85,6 +92,7 @@ public static class Exports
             catch (Exception ex)
             {
                 state.ErrorMessage = ex.Message;
+                state.ErrorDetails = ex.ToString();
                 state.IsFailed = true;
             }
             finally
@@ -92,6 +100,31 @@ public static class Exports
                 state.IsDone = true;
             }
         });
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "get_mo2_profiles")]
+    public static IntPtr GetMo2Profiles(IntPtr instancePathPtr)
+    {
+        var instancePath = Marshal.PtrToStringUTF8(instancePathPtr) ?? string.Empty;
+        try
+        {
+            var discovery = Mo2InstanceReader.DiscoverProfiles(instancePath);
+            return ToNativeUtf8(JsonSerializer.Serialize(new
+            {
+                Profiles = discovery.Profiles,
+                discovery.SelectedProfile,
+                ErrorMessage = (string?)null,
+            }));
+        }
+        catch (Exception ex)
+        {
+            return ToNativeUtf8(JsonSerializer.Serialize(new
+            {
+                Profiles = Array.Empty<string>(),
+                SelectedProfile = (string?)null,
+                ErrorMessage = ex.Message,
+            }));
+        }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "get_progress")]
@@ -107,7 +140,8 @@ public static class Exports
             IsDone: state?.IsDone ?? false,
             IsFailed: state?.IsFailed ?? false,
             ResultJson: state?.ResultJson,
-            ErrorMessage: state?.ErrorMessage);
+            ErrorMessage: state?.ErrorMessage,
+            ErrorDetails: state?.ErrorDetails);
 
         return ToNativeUtf8(JsonSerializer.Serialize(payload));
     }
@@ -138,5 +172,6 @@ public static class Exports
         bool IsDone,
         bool IsFailed,
         string? ResultJson,
-        string? ErrorMessage);
+        string? ErrorMessage,
+        string? ErrorDetails);
 }

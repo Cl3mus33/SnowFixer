@@ -22,6 +22,8 @@ Point Snow Fixer at your load order (via Mod Organizer 2, or a plain Data folder
   own snow texture, aware of the Vanilla / Complex Material / True PBR conventions (correct
   compression format + a matching PBRNifPatcher json when needed), and apply it to exactly the
   right part ("Skirt") of the generated DirtCliffs meshes.
+- **Error handling** — malformed asset paths are reported and skipped per record where possible;
+  fatal run errors include detailed exception information in the progress window.
 - Run fully offline against your files — it never touches the running game.
 
 ## Two native tools, one patch engine
@@ -40,7 +42,8 @@ The actual scanning/patching logic lives in **`src/SnowFixer.Core`** (C#, built 
 ## Installation
 
 1. Download the latest release and install it like any other mod (MO2: as a regular mod).
-2. Point it at your game install, your mod manager (if any), and an output folder.
+2. Point it at your game install, your mod manager (if any), and an output folder. When using MO2,
+   choose the instance and the profile whose `modlist.txt`/`plugins.txt` should be scanned.
 3. Run it, then enable the generated output plugin in your mod manager.
 
 Supports Skyrim Special Edition.

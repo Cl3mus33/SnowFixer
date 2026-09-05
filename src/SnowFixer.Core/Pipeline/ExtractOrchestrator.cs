@@ -1,5 +1,6 @@
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Environments;
+using Mutagen.Bethesda.Plugins.Exceptions;
 using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Skyrim;
 using nifly;
@@ -10,11 +11,11 @@ namespace SnowFixer.Core.Pipeline;
 
 /// <summary>
 /// Standalone from AutoBlend. Scans the vanilla Skyrim SE Data folder (base game + official DLCs +
-/// every installed Creation Club addon - all just regular BSA/ESM pairs in Data, no mod manager
-/// involved) for every base record with a NIF model whose EditorID or mesh path mentions "snow",
-/// duplicates each winning mesh right alongside the original (its own EditorID- or "_snow"-suffixed
-/// name is what keeps it from colliding with the original, not a separate folder - see
-/// DuplicateMesh), and writes a single
+/// every installed Creation Club addon) or, when MO2 is selected, the active plugin load order
+/// layered over that folder for every base record with a NIF model whose EditorID or mesh path
+/// mentions "snow". It duplicates each winning mesh right alongside the original (its own
+/// EditorID- or "_snow"-suffixed name is what keeps it from colliding with the original, not a
+/// separate folder - see DuplicateMesh), and writes a single
 /// ESP overriding those records' Model.File to point at the duplicates. Since each matched record
 /// gets its own dedicated physical duplicate (never shared with another record), any pre-existing
 /// Alternate Texture on that record is baked directly into the duplicate's own embedded texture
@@ -60,6 +61,7 @@ public sealed class ExtractOrchestrator
     private int _matched;
     private int _meshesCopied;
     private int _meshesFailed;
+    private int _malformedRecordsSkipped;
     private int _altTexBaked;
     private int _altTexFailed;
     private int _shaderFlagsPatched;
@@ -106,8 +108,25 @@ public sealed class ExtractOrchestrator
 
         Report("Loading game environment...");
 
-        using var mo2Reader = _settings.ModManager == ModManagerType.ModOrganizer2
-            ? new Mo2InstanceReader(_settings.Mo2InstancePath, _settings.Mo2ProfileName, GameRelease.SkyrimSE)
+        string? mo2ProfileName = null;
+        if (_settings.ModManager == ModManagerType.ModOrganizer2)
+        {
+            mo2ProfileName = _settings.Mo2ProfileName;
+            if (string.IsNullOrWhiteSpace(mo2ProfileName))
+            {
+                if (!Mo2InstanceReader.TryDetectSelectedProfile(_settings.Mo2InstancePath, out var detectedProfile))
+                {
+                    throw new InvalidOperationException(
+                        $"No MO2 profile was selected and ModOrganizer.ini did not identify one. " +
+                        $"Select a profile in the launcher or set selected_profile in '{Path.Combine(_settings.Mo2InstancePath, "ModOrganizer.ini")}'.");
+                }
+
+                mo2ProfileName = detectedProfile;
+            }
+        }
+
+        using var mo2Reader = mo2ProfileName is not null
+            ? new Mo2InstanceReader(_settings.Mo2InstancePath, mo2ProfileName, GameRelease.SkyrimSE)
             : null;
 
         // Mutagen loads every plugin from one physical Data folder — it has no notion of MO2's
@@ -117,7 +136,7 @@ public sealed class ExtractOrchestrator
         // actually shows in-game. Meshes/textures are NOT materialized — those stay served live
         // through Mo2ModlistFileProbe.
         using var materializedLoadOrder = mo2Reader is not null
-            ? Mo2LoadOrderMaterializer.Materialize(mo2Reader, _settings.Mo2ProfileName, _dataFolder, _diagnostics)
+            ? Mo2LoadOrderMaterializer.Materialize(mo2Reader, mo2ProfileName!, _dataFolder, _diagnostics)
             : null;
 
         var envDataFolder = materializedLoadOrder?.DataFolder ?? _dataFolder;
@@ -208,6 +227,7 @@ public sealed class ExtractOrchestrator
             _matched,
             _meshesCopied,
             _meshesFailed,
+            _malformedRecordsSkipped,
             _altTexBaked,
             _altTexFailed,
             _shaderFlagsPatched,
@@ -236,6 +256,7 @@ public sealed class ExtractOrchestrator
             $"Records matched: {result.RecordsMatched}",
             $"Meshes duplicated: {result.MeshesDuplicated}",
             $"Meshes failed to resolve: {result.MeshesFailed}",
+            $"Malformed records skipped: {result.MalformedRecordsSkipped}",
             $"Alternate Textures baked: {result.AlternateTexturesBaked}",
             $"Alternate Textures that couldn't be baked: {result.AlternateTexturesFailed}",
             $"Meshes with ZBuffer_Write/No_Fade shader flag fixups: {result.ShaderFlagsPatched}",
@@ -382,36 +403,52 @@ public sealed class ExtractOrchestrator
 
         var shapes = nifFile.GetShapes().ToList();
         var baked = false;
+        var failed = false;
 
         foreach (var altTex in altTexs)
         {
-            if (!_env.LinkCache.TryResolve<ITextureSetGetter>(altTex.NewTexture.FormKey, out var txst)
-                || string.IsNullOrEmpty(txst.Diffuse?.GivenPath))
+            try
             {
-                _diagnostics.Add($"'{label}': could not resolve Alternate Texture's TextureSet for shape '{altTex.Name}' - left as-is.");
-                _altTexFailed++;
-                continue;
-            }
-
-            var shape = shapes.FirstOrDefault(s => s.name.get() == altTex.Name)
-                ?? (altTex.Index >= 0 && altTex.Index < shapes.Count ? shapes[altTex.Index] : null);
-            if (shape is null)
-            {
-                _diagnostics.Add($"'{label}': Alternate Texture's shape '{altTex.Name}' (index {altTex.Index}) not found in the duplicated mesh - left as-is.");
-                _altTexFailed++;
-                continue;
-            }
-
-            foreach (var (slot, path) in TextureSetSlots(txst))
-            {
-                if (!string.IsNullOrEmpty(path))
+                if (!_env.LinkCache.TryResolve<ITextureSetGetter>(altTex.NewTexture.FormKey, out var txst)
+                    || string.IsNullOrEmpty(txst.Diffuse?.GivenPath))
                 {
-                    nifFile.SetTextureSlot(shape, path, slot);
+                    _diagnostics.Add($"'{label}': could not resolve Alternate Texture's TextureSet for shape '{altTex.Name}' - left as-is.");
+                    _altTexFailed++;
+                    failed = true;
+                    continue;
                 }
-            }
 
-            baked = true;
-            _altTexBaked++;
+                var shape = shapes.FirstOrDefault(s => s.name.get() == altTex.Name)
+                    ?? (altTex.Index >= 0 && altTex.Index < shapes.Count ? shapes[altTex.Index] : null);
+                if (shape is null)
+                {
+                    _diagnostics.Add($"'{label}': Alternate Texture's shape '{altTex.Name}' (index {altTex.Index}) not found in the duplicated mesh - left as-is.");
+                    _altTexFailed++;
+                    failed = true;
+                    continue;
+                }
+
+                // Materialize all slots before changing the NIF so a malformed path cannot leave a
+                // partially baked Alternate Texture behind.
+                var slots = TextureSetSlots(txst).ToArray();
+                foreach (var (slot, path) in slots)
+                {
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        nifFile.SetTextureSlot(shape, path, slot);
+                    }
+                }
+
+                baked = true;
+                _altTexBaked++;
+            }
+            catch (AssetPathMisalignedException ex)
+            {
+                _altTexFailed++;
+                failed = true;
+                _diagnostics.Add(
+                    $"'{label}': invalid Alternate Texture asset path for shape '{altTex.Name}' - left as-is. {ex.Message}");
+            }
         }
 
         if (baked)
@@ -424,7 +461,10 @@ public sealed class ExtractOrchestrator
             }
         }
 
-        return baked;
+        // Keep the ESP-level list when any entry failed. Dropping the whole list after baking only
+        // a subset would silently discard the failed Alternate Texture, while retaining it is a
+        // safe fallback for both the malformed and successfully baked entries.
+        return baked && !failed;
     }
 
     // Same fix as AutoBlend's own NiAlphaBlendPatcher: every shape carrying a NiAlphaProperty
@@ -775,7 +815,18 @@ public sealed class ExtractOrchestrator
         foreach (var record in winningOverrides)
         {
             var editorId = getEditorId(record);
-            var modelPath = getModelPath(record);
+            string? modelPath;
+            try
+            {
+                modelPath = getModelPath(record);
+            }
+            catch (AssetPathMisalignedException ex)
+            {
+                _diagnostics.Add(
+                    $"{typeName} {record.FormKey} ({editorId ?? "<no EditorID>"}): invalid model path; record skipped. {ex.Message}");
+                continue;
+            }
+
             if (modelPath is null
                 || _blacklist.IsMeshBlacklisted(modelPath)
                 || _blacklist.IsEditorIdBlacklisted(editorId ?? string.Empty))
@@ -825,7 +876,20 @@ public sealed class ExtractOrchestrator
             var overrideModel = getOrAddOverrideModel(record);
             overrideModel.File = duplicatedPath;
 
-            var altTexs = getAlternateTextures(record);
+            IReadOnlyList<IAlternateTextureGetter>? altTexs;
+            try
+            {
+                altTexs = getAlternateTextures(record);
+            }
+            catch (AssetPathMisalignedException ex)
+            {
+                _malformedRecordsSkipped++;
+                _diagnostics.Add(
+                    $"{typeName} {record.FormKey} ({editorId ?? "<no EditorID>"}): invalid alternate texture path; " +
+                    $"mesh was generated but alternate textures were left as-is. {ex.Message}");
+                altTexs = null;
+            }
+
             if (altTexs is { Count: > 0 } && BakeAlternateTextures(duplicatedPath, altTexs, editorId ?? modelPath))
             {
                 overrideModel.AlternateTextures = null;

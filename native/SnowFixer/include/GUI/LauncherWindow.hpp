@@ -12,7 +12,7 @@
 /**
  * @class LauncherWindow
  * @brief The main settings dialog - General tab (Game Location, Output Location, Mod Manager/MO2
- * Instance Path, Landscape Vertex Color mode, Mesh Vertex Color mode, Mesh Blacklist, EditorID
+ * Instance Path/Profile, Landscape Vertex Color mode, Mesh Vertex Color mode, Mesh Blacklist, EditorID
  * Blacklist Keywords) and Options tab (Language, Theme). Trimmed down from AutoBlend's own
  * LauncherWindow: no auto-generate allowlist, no PBR checkbox, no Config Profile load/save - none of
  * that exists in SnowFixer.Core.Configuration.ExtractSettings.
@@ -38,6 +38,8 @@ private:
     wxStaticText* m_mo2InstancePathLabel = nullptr;
     wxTextCtrl* m_mo2InstancePathTextbox = nullptr;
     wxButton* m_mo2InstanceBrowseButton = nullptr;
+    wxStaticText* m_mo2ProfileLabel = nullptr;
+    wxChoice* m_mo2ProfileChoice = nullptr;
     wxRadioButton* m_landscapeModeNoneRadio = nullptr;
     wxRadioButton* m_landscapeModeAllRadio = nullptr;
     wxRadioButton* m_landscapeModeSnowRadio = nullptr;
@@ -57,6 +59,8 @@ private:
     void onBrowseOutputLocation(wxCommandEvent&);
     void onModManagerChanged(wxCommandEvent&);
     void onBrowseMo2Instance(wxCommandEvent&);
+    void onMo2InstancePathChanged(wxCommandEvent&);
+    void refreshMo2Profiles();
     void updateMo2FieldState();
     void commitPendingListEdits();
     void updateListColumnWidths();
