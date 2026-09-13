@@ -70,19 +70,36 @@ public sealed class ExtractSettings
 
     /// <summary>Wildcard path patterns (e.g. "*\effects\*"). A record whose mesh path matches one
     /// of these is skipped entirely, even if it would otherwise match the snow-detection criteria -
-    /// same convention as AutoBlend.Core.Configuration.PatcherSettings.MeshBlacklist. Defaults to
-    /// the one rule this project's own scan already relied on before this list was configurable:
-    /// real Tree records are never scanned at all (see ExtractOrchestrator.Run's own record-type
-    /// list), but tree DEBRIS (fallen logs, cut stumps) is authored as plain Static records living
-    /// in the same "Landscape\Trees\..." folder and would otherwise slip through IsSnow's own
-    /// substring check. No other snow-specific exclusion has been established the way AutoBlend's
-    /// own landscape ones have (glass/ice/roads/etc.), so beyond this one, it's a user-driven opt-in
-    /// list rather than guessing at rules without evidence behind them.</summary>
-    public List<string> MeshBlacklist { get; set; } = new() { @"*\trees\*" };
+    /// same convention as AutoBlend.Core.Configuration.PatcherSettings.MeshBlacklist. Defaults
+    /// refined through real use against a real modlist: "*\trees\*" covers tree DEBRIS (fallen
+    /// logs, cut stumps) - real Tree records are never scanned at all (see
+    /// ExtractOrchestrator.Run's own record-type list), but debris is authored as plain Static
+    /// records living in the same "Landscape\Trees\..." folder and would otherwise slip through
+    /// IsSnow's own substring check. The rest (ice, effects, weapons, trophy, snowelfruins, wet,
+    /// lod, clutter, architecture, dungeons) rule out categories that matched "snow" in their
+    /// EditorID/path but weren't actually candidates worth duplicating/patching - visual effects,
+    /// weapon models, trophies, wet-surface variants, LOD meshes, and non-landscape clutter or
+    /// architecture/dungeon assets.</summary>
+    public List<string> MeshBlacklist { get; set; } = new()
+    {
+        @"*\trees\*",
+        @"*\ice\*",
+        @"*\effects\*",
+        @"*\weapons\*",
+        @"*\trophy\*",
+        @"*\snowelfruins\*",
+        @"*\wet\*",
+        @"*\lod\*",
+        @"*\clutter\*",
+        @"*\architecture\*",
+        @"*\dungeons\*",
+    };
 
     /// <summary>Case-insensitive substrings. A record whose EditorID contains one of these is
     /// skipped entirely - same convention as
-    /// AutoBlend.Core.Configuration.PatcherSettings.EditorIdBlacklistKeywords. Empty by default,
-    /// same reasoning as <see cref="MeshBlacklist"/>.</summary>
-    public List<string> EditorIdBlacklistKeywords { get; set; } = new();
+    /// AutoBlend.Core.Configuration.PatcherSettings.EditorIdBlacklistKeywords. Defaults refined
+    /// through real use: "marker" and "lod" rule out non-visual/LOD records that match "snow" in
+    /// name only, "glacier" rules out glacier-specific records that aren't real candidates for
+    /// this tool's own snow-mesh fixes.</summary>
+    public List<string> EditorIdBlacklistKeywords { get; set; } = new() { "marker", "glacier", "lod" };
 }

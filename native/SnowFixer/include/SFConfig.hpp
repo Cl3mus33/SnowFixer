@@ -70,14 +70,21 @@ struct SFParams {
     /// to MO2's selected_profile setting for older callers/config files.
     std::wstring mo2ProfileName;
 
-    /// @brief Meshes matching any wildcard rule here are never duplicated/patched. Defaults to the
-    /// single rule Snow Fixer used to hardcode (tree debris meshes living under the same
-    /// Landscape\Trees\ folder as real Tree records, which are excluded by record type already).
-    std::vector<std::wstring> meshBlacklist { LR"(*\trees\*)" };
+    /// @brief Meshes matching any wildcard rule here are never duplicated/patched. Defaults
+    /// refined through real use against a real modlist - see
+    /// SnowFixer.Core.Configuration.ExtractSettings.MeshBlacklist for the reasoning behind each
+    /// entry; both sides must stay in lockstep.
+    std::vector<std::wstring> meshBlacklist {
+        LR"(*\trees\*)",       LR"(*\ice\*)",         LR"(*\effects\*)",
+        LR"(*\weapons\*)",     LR"(*\trophy\*)",      LR"(*\snowelfruins\*)",
+        LR"(*\wet\*)",         LR"(*\lod\*)",         LR"(*\clutter\*)",
+        LR"(*\architecture\*)", LR"(*\dungeons\*)",
+    };
     /// @brief Records whose EditorID contains one of these words (case-insensitive) are skipped
-    /// entirely. Empty by default - unlike AutoBlend's own equivalent setting, no evidence-based
-    /// default rule exists yet for Snow Fixer.
-    std::vector<std::wstring> editorIdBlacklistKeywords;
+    /// entirely. Defaults refined through real use - see
+    /// SnowFixer.Core.Configuration.ExtractSettings.EditorIdBlacklistKeywords for the reasoning;
+    /// both sides must stay in lockstep.
+    std::vector<std::wstring> editorIdBlacklistKeywords { L"marker", L"glacier", L"lod" };
 
     /// @brief Generates a snow variant of Vanaheimr's own "landscape\dirtcliffs\dirtcliffsroots01"
     /// texture - one specific, hardcoded texture pair rather than a general engine. Off by default.
