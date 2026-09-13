@@ -1,5 +1,6 @@
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Archives;
+using Noggog;
 
 namespace SnowFixer.Core.Scanning;
 
@@ -28,12 +29,21 @@ public sealed class ArchiveAwareFileProbe : IGameFileProbe
     {
         _looseProbe = new LooseFileProbe(dataRoot);
 
-        var archivePaths = Archive.GetApplicableArchivePaths(gameRelease, dataRoot);
+        var archivePaths = GetApplicableArchivePathsSafe(gameRelease, dataRoot);
 
         var readers = new List<IArchiveReader>();
         foreach (var archivePath in archivePaths)
         {
-            readers.Add(Archive.CreateReader(gameRelease, archivePath));
+            // A corrupt or unsupported-format archive can throw here - one bad archive in the real
+            // Data folder must not abort the whole run.
+            try
+            {
+                readers.Add(Archive.CreateReader(gameRelease, archivePath));
+            }
+            catch (Exception)
+            {
+                // Skip archives Mutagen can't parse (corrupt/unsupported format).
+            }
         }
         _archiveReaders = readers;
     }
@@ -90,15 +100,51 @@ public sealed class ArchiveAwareFileProbe : IGameFileProbe
         }
 
         var index = new Dictionary<string, IArchiveFile>(StringComparer.OrdinalIgnoreCase);
-        foreach (var archiveFile in reader.Files)
+        try
         {
-            // A handful of archives ship the same path under two different cases as distinct
-            // entries - first one wins, matching how the game itself only ever sees one at a time.
-            index.TryAdd(archiveFile.Path, archiveFile);
+            foreach (var archiveFile in reader.Files)
+            {
+                // A handful of archives ship the same path under two different cases as distinct
+                // entries - first one wins, matching how the game itself only ever sees one at a time.
+                index.TryAdd(archiveFile.Path, archiveFile);
+            }
+        }
+        catch (Exception)
+        {
+            // A malformed/corrupt archive's own internal filename table can throw while being
+            // enumerated here. Whatever this archive already indexed before hitting the bad part
+            // stays usable - better than discarding it entirely - but nothing more from it will
+            // ever be found.
         }
 
         _archiveIndexes[reader] = index;
         return index;
+    }
+
+    /// <summary>
+    /// Mutagen's own Archive.GetApplicableArchivePaths sorts every matching archive by a priority
+    /// comparer that can throw NotImplementedException from deep inside Mutagen itself (reported
+    /// directly against a real MO2 modlist): two archives whose names collapse to the same
+    /// base+suffix pair after stripping a " - Suffix" segment reach a branch Mutagen never
+    /// implemented. TryFindArchiveFile only cares about which archives exist at all (first match
+    /// wins in whatever order they're returned) - it doesn't need Mutagen's own priority ordering -
+    /// so falling back to a plain, unsorted directory listing on failure keeps the whole run from
+    /// crashing over a dependency bug that has nothing to do with which files are actually being
+    /// looked up.
+    /// </summary>
+    private static IEnumerable<FilePath> GetApplicableArchivePathsSafe(GameRelease release, string dataRoot)
+    {
+        try
+        {
+            return Archive.GetApplicableArchivePaths(release, dataRoot).ToList();
+        }
+        catch (Exception)
+        {
+            var extension = Archive.GetExtension(release);
+            return Directory.Exists(dataRoot)
+                ? Directory.EnumerateFiles(dataRoot, "*" + extension).Select(path => (FilePath)path).ToList()
+                : Enumerable.Empty<FilePath>();
+        }
     }
 
     public void Dispose()
