@@ -1,8 +1,8 @@
 # Snow Fixer
 
-**Work in progress.** A standalone tool for Skyrim Special Edition that scans your load order for
-every snow-related mesh and record, duplicates and patches the winning ones, and writes a single
-plugin pointing at the fixes — without ever touching an original asset.
+A standalone tool for Skyrim Special Edition that scans your load order for every snow-related mesh
+and record, duplicates and patches the winning ones, and writes a single plugin pointing at the
+fixes — without ever touching an original asset.
 
 ## What it does
 
@@ -22,6 +22,11 @@ Point Snow Fixer at your load order (via Mod Organizer 2, or a plain Data folder
   own snow texture, aware of the Vanilla / Complex Material / True PBR conventions (correct
   compression format + a matching PBRNifPatcher json when needed), and apply it to exactly the
   right part ("Skirt") of the generated DirtCliffs meshes.
+- **MountainSlab Mask Swap** — for a record whose EditorID ends in "Snow"/"SN", repoint any shape
+  using the MountainSlab01/02 texture to its "...Mask" sibling when a texture pack ships one, so
+  rock/mountain meshes read correctly under a snow overlay.
+- **Mesh blacklist / EditorID keyword blacklist** — exclude specific meshes (wildcards supported)
+  or any record whose EditorID contains a given keyword, to rule out false-positive matches.
 - **Error handling** — malformed asset paths are reported and skipped per record where possible;
   fatal run errors include detailed exception information in the progress window.
 - Run fully offline against your files — it never touches the running game.

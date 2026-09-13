@@ -82,6 +82,11 @@ struct SFParams {
     /// @brief Generates a snow variant of Vanaheimr's own "landscape\dirtcliffs\dirtcliffsroots01"
     /// texture - one specific, hardcoded texture pair rather than a general engine. Off by default.
     bool generateDirtCliffsSnowVariant = false;
+
+    /// @brief For a record whose EditorID ends in "Snow"/"SN", swaps a "mountainslab01"/
+    /// "mountainslab02" diffuse for its "...Mask" sibling when one exists on disk - one specific,
+    /// hardcoded texture pair rather than a general engine. Off by default.
+    bool swapMountainSlabMask = false;
 };
 
 /**

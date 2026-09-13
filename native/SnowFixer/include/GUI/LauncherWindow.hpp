@@ -51,6 +51,7 @@ private:
     PGModifiableListCtrl* m_meshBlacklistCtrl = nullptr;
     PGModifiableListCtrl* m_editorIdKeywordsCtrl = nullptr;
     wxCheckBox* m_generateDirtCliffsSnowVariantCheckbox = nullptr;
+    wxCheckBox* m_swapMountainSlabMaskCheckbox = nullptr;
     wxButton* m_okButton = nullptr;
 
     void onLanguageChanged(wxCommandEvent&);

@@ -58,6 +58,11 @@
       "checkbox": "Generar una variante de nieve de la textura DirtCliffsRoots01",
       "help": "Genera el/los archivo(s) de textura y los aplica a la parte «Skirt» de las mallas DirtCliffs generadas."
     },
+    "mountainSlabMask": {
+      "label": "Sustitución Mask de MountainSlab",
+      "checkbox": "Sustituir MountainSlab01/02 por su variante Mask en mallas con nombre de nieve",
+      "help": "Para un registro cuyo EditorID termina en «Snow»/«SN», redirige cualquier forma que use MountainSlab01/02 hacia su variante «...Mask», si existe en el disco."
+    },
     "tab": {
       "general": "General",
       "options": "Opciones"

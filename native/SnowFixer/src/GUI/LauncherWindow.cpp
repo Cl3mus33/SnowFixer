@@ -269,6 +269,25 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     collisionColumnSizer->Add(m_collisionMaterialModeNoneRadio, 0, wxTOP, BORDER_SIZE);
     collisionColumnSizer->Add(m_collisionMaterialModeSnowOnlyRadio, 0, wxTOP, BORDER_SIZE);
 
+    // MountainSlab Mask swap - one specific, hardcoded texture pair ("mountainslab01"/
+    // "mountainslab02" swapped for their own "...Mask" sibling), not a general texture-generation
+    // engine. Off by default. Placed in this column purely to balance the two columns' height -
+    // no thematic link to collision materials beyond both being small opt-in toggles.
+    collisionColumnSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.mountainSlabMask.label", "MountainSlab Mask Swap")), 0,
+        wxTOP, BORDER_SIZE * 2);
+
+    m_swapMountainSlabMaskCheckbox = new wxCheckBox(generalPanel, wxID_ANY,
+        SFTr("launcher.mountainSlabMask.checkbox", "Swap MountainSlab01/02 for their Mask variant on snow-named meshes"));
+    m_swapMountainSlabMaskCheckbox->SetValue(initParams.swapMountainSlabMask);
+    collisionColumnSizer->Add(m_swapMountainSlabMaskCheckbox, 0, wxTOP, BORDER_SIZE);
+
+    auto* mountainSlabMaskHelpText = new wxStaticText(generalPanel, wxID_ANY,
+        SFTr("launcher.mountainSlabMask.help",
+            "For a record whose EditorID ends in \"Snow\"/\"SN\", repoints any shape using "
+            "MountainSlab01/02 to its \"...Mask\" sibling, when one exists on disk."));
+    mountainSlabMaskHelpText->Wrap(HELP_WRAP_PAIRED);
+    collisionColumnSizer->Add(mountainSlabMaskHelpText, 0, wxTOP, BORDER_SIZE);
+
     // DirtCliffsRoots snow variant - one specific, hardcoded texture pair ("landscape\dirtcliffs\
     // dirtcliffsroots01" composited with "landscape\snow01"), not a general texture-generation
     // engine. Off by default.
@@ -500,6 +519,7 @@ void LauncherWindow::getParams(SFParams& outParams) const
     }
 
     outParams.generateDirtCliffsSnowVariant = m_generateDirtCliffsSnowVariantCheckbox->GetValue();
+    outParams.swapMountainSlabMask = m_swapMountainSlabMaskCheckbox->GetValue();
 }
 
 void LauncherWindow::onLanguageChanged([[maybe_unused]] wxCommandEvent& event)

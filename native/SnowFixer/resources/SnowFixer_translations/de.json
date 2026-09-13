@@ -58,6 +58,11 @@
       "checkbox": "Eine Schnee-Variante der DirtCliffsRoots01-Textur generieren",
       "help": "Erzeugt die Textur-Datei(en) und wendet sie auf den „Skirt“-Teil der generierten DirtCliffs-Meshes an."
     },
+    "mountainSlabMask": {
+      "label": "MountainSlab-Mask-Austausch",
+      "checkbox": "MountainSlab01/02 durch ihre Mask-Variante auf schnee-benannten Meshes ersetzen",
+      "help": "Für einen Datensatz, dessen EditorID auf „Snow“/„SN“ endet, wird jede Form, die MountainSlab01/02 verwendet, auf ihr „...Mask“-Gegenstück umgeleitet, sofern dieses auf der Festplatte vorhanden ist."
+    },
     "tab": {
       "general": "Allgemein",
       "options": "Optionen"

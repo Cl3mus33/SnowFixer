@@ -68,6 +68,7 @@ public sealed class ExtractOrchestrator
     private int _vertexColorsNeutralized;
     private int _collisionMaterialsRemapped;
     private int _dirtCliffsSkirtShapesRetextured;
+    private int _mountainSlabMaskSwapped;
     private int _nonSnowLandscapeMeshesIncluded;
     private int _landscapesPatched;
 
@@ -234,6 +235,7 @@ public sealed class ExtractOrchestrator
             _vertexColorsNeutralized,
             _collisionMaterialsRemapped,
             _dirtCliffsSkirtShapesRetextured,
+            _mountainSlabMaskSwapped,
             _nonSnowLandscapeMeshesIncluded,
             _landscapesPatched,
             dirtCliffsSnowVariantGenerated,
@@ -263,6 +265,7 @@ public sealed class ExtractOrchestrator
             $"Meshes with vertex colors neutralized: {result.VertexColorsNeutralized}",
             $"Meshes with collision materials remapped to snow: {result.CollisionMaterialsRemapped}",
             $"DirtCliffs 'Skirt' shapes retextured to the snow variant: {result.DirtCliffsSkirtShapesRetextured}",
+            $"MountainSlab shapes swapped to their Mask variant: {result.MountainSlabMaskSwapped}",
             $"Non-snow landscape meshes also included for vertex color/collision fixups: {result.NonSnowLandscapeMeshesIncluded}",
             $"Landscape records with vertex colors cleared: {result.LandscapesPatched}",
             $"DirtCliffsRoots snow variant texture generated: {result.DirtCliffsSnowVariantGenerated}",
@@ -792,6 +795,12 @@ public sealed class ExtractOrchestrator
         nifFile.SetTextureSlot(skirtShape, DirtCliffsSnowVariantGenerator.OutputDiffuseRelativePath, 0);
         nifFile.SetTextureSlot(skirtShape, DirtCliffsSnowVariantGenerator.OutputNormalRelativePath, 1);
 
+        // Cloning Skirt's texture set above (when it was shared) leaves the original block behind -
+        // still present in the file but referenced by nothing, which NifSkope shows as a dimmed,
+        // disconnected block. orphanedOnly=true only removes texture sets no shape still points to, so
+        // this is a no-op whenever Skirt's texture set wasn't shared to begin with.
+        nifFile.GetHeader().DeleteBlockByType("BSShaderTextureSet", true);
+
         var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
         if (nifFile.Save(fullPath, saveOptions) != 0)
         {
@@ -800,6 +809,96 @@ public sealed class ExtractOrchestrator
         }
 
         _dirtCliffsSkirtShapesRetextured++;
+    }
+
+    // For records whose EditorID ends in "Snow"/"SN" - a naming convention some texture packs use
+    // for their own hand-authored snow variant of a record - the mesh may still embed the plain
+    // (non-snow) "mountainslab01"/"mountainslab02" diffuse rather than that pack's own "...Mask"
+    // sibling, which several rock/mountain texture packs ship specifically for use under a snow
+    // overlay. Every shape whose diffuse matches gets repointed, not just one named shape - unlike
+    // DirtCliffs' single "Skirt" shape, there's no established single-shape convention here. Only
+    // ever swaps to a sibling that actually exists on disk - never invents a path a texture pack
+    // might not ship.
+    private void SwapMountainSlabToMaskVariant(string duplicatedRelativePath, string label)
+    {
+        var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
+
+        using var nifFile = new NifFile();
+        if (nifFile.Load(fullPath) != 0)
+        {
+            _diagnostics.Add($"'{label}': failed to reload duplicated mesh for MountainSlab mask swap.");
+            return;
+        }
+
+        var swapped = false;
+        foreach (var shape in nifFile.GetShapes())
+        {
+            if (!shape.HasShaderProperty()
+                || nifFile.GetHeader().GetBlockById(shape.ShaderPropertyRef().index) is not BSLightingShaderProperty shaderProperty
+                || nifFile.GetHeader().GetBlockById(shaderProperty.TextureSetRef().index) is not BSShaderTextureSet textureSet)
+            {
+                continue;
+            }
+
+            var items = textureSet.textures.items();
+            if (items.Count == 0)
+            {
+                continue;
+            }
+
+            var diffuse = items[0].get();
+            if (string.IsNullOrEmpty(diffuse)
+                || !(diffuse.EndsWith("mountainslab01.dds", StringComparison.OrdinalIgnoreCase)
+                    || diffuse.EndsWith("mountainslab02.dds", StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            var maskPath = diffuse[..^".dds".Length] + "Mask.dds";
+            if (!_fileProbe.Exists(maskPath))
+            {
+                _diagnostics.Add($"'{label}': shape '{shape.name.get()}' uses '{diffuse}' but no '{maskPath}' sibling exists - left as-is.");
+                continue;
+            }
+
+            // The texture set may be shared with sibling shapes (same pitfall as DirtCliffs' own
+            // Skirt shape above) - give this shape its own private copy before touching any slot.
+            var privateItems = new vectorNiString();
+            foreach (var item in items)
+            {
+                privateItems.Add(new NiString(item.get()));
+            }
+
+            var privateTextureSet = new BSShaderTextureSet();
+            var privateVector = new NiStringVector();
+            privateVector.SetItems(privateItems);
+            privateTextureSet.textures = privateVector;
+
+            var privateTextureSetIndex = nifFile.GetHeader().AddBlock(privateTextureSet);
+            GC.SuppressFinalize(privateTextureSet);
+            shaderProperty.SetTextureSetRef(privateTextureSetIndex);
+
+            nifFile.SetTextureSlot(shape, maskPath, 0);
+            swapped = true;
+        }
+
+        if (!swapped)
+        {
+            return;
+        }
+
+        // Same cleanup as RetextureDirtCliffsSkirt above - cloning a shared texture set per matching
+        // shape leaves each original block behind once nothing references it anymore.
+        nifFile.GetHeader().DeleteBlockByType("BSShaderTextureSet", true);
+
+        var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
+        if (nifFile.Save(fullPath, saveOptions) != 0)
+        {
+            _diagnostics.Add($"'{label}': failed to save the mesh after MountainSlab mask swap.");
+            return;
+        }
+
+        _mountainSlabMaskSwapped++;
     }
 
     private void ProcessType<TGetter>(
@@ -907,6 +1006,11 @@ public sealed class ExtractOrchestrator
             if (_settings.GenerateDirtCliffsSnowVariant && modelPath.Contains("dirtcliffs", StringComparison.OrdinalIgnoreCase))
             {
                 RetextureDirtCliffsSkirt(duplicatedPath, editorId ?? modelPath);
+            }
+            if (_settings.SwapMountainSlabMask && editorId is not null
+                && (editorId.EndsWith("Snow", StringComparison.OrdinalIgnoreCase) || editorId.EndsWith("SN", StringComparison.OrdinalIgnoreCase)))
+            {
+                SwapMountainSlabToMaskVariant(duplicatedPath, editorId);
             }
 
             _matched++;

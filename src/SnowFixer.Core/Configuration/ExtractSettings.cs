@@ -46,6 +46,14 @@ public sealed class ExtractSettings
     /// default.</summary>
     public bool GenerateDirtCliffsSnowVariant { get; set; }
 
+    /// <summary>For a record whose EditorID ends in "Snow" or "SN" (case-insensitive), swaps any
+    /// shape's diffuse texture ending in "mountainslab01.dds"/"mountainslab02.dds" (case-insensitive)
+    /// for its "...Mask.dds" sibling in the same folder, when that sibling actually exists on disk -
+    /// see <see cref="Pipeline.ExtractOrchestrator.SwapMountainSlabToMaskVariant"/>. One specific,
+    /// hardcoded texture pair rather than a general engine - opt-in, off by default, same reasoning
+    /// as <see cref="GenerateDirtCliffsSnowVariant"/>.</summary>
+    public bool SwapMountainSlabMask { get; set; }
+
     /// <summary>None (scan the raw Data folder directly - nothing extra to configure) or
     /// ModOrganizer2 (requires <see cref="Mo2InstancePath"/> to reconstruct its virtual file
     /// system, layering every enabled mod on top of the vanilla Data folder).</summary>

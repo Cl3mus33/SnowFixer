@@ -93,6 +93,9 @@ auto SFConfig::loadFrom(const filesystem::path& configFilePath) -> SFParams
         if (configJ.contains("GenerateDirtCliffsSnowVariant")) {
             params.generateDirtCliffsSnowVariant = configJ["GenerateDirtCliffsSnowVariant"].get<bool>();
         }
+        if (configJ.contains("SwapMountainSlabMask")) {
+            params.swapMountainSlabMask = configJ["SwapMountainSlabMask"].get<bool>();
+        }
     } catch (const exception& e) {
         Logger::warn("Failed to parse settings file, using defaults: {}", e.what());
         return SFParams {};
@@ -127,6 +130,7 @@ auto SFConfig::toJson(const SFParams& params) -> nlohmann::json
     }
 
     configJ["GenerateDirtCliffsSnowVariant"] = params.generateDirtCliffsSnowVariant;
+    configJ["SwapMountainSlabMask"] = params.swapMountainSlabMask;
 
     return configJ;
 }
