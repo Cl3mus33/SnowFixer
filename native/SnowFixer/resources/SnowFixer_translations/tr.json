@@ -1,0 +1,106 @@
+{
+  "_language": "Türkçe",
+  "common": {
+    "browse": "Gözat",
+    "cancel": "İptal"
+  },
+  "launcher": {
+    "intro": "Skyrim SE’nin vanilla Data klasörünü, EditorID’sinde veya mesh yolunda kar ifadesi geçen tüm kayıtlar için tarar; her biri için kullanılan mesh’in bir kopyasını oluşturur ve kopyalara işaret eden bir eklenti yazar. Böylece hiçbir özgün varlığa dokunmadan bunlar üzerinde özgürce düzenleme yapılabilir.",
+    "gameLocation": {
+      "label": "Oyun Konumu",
+      "dialogTitle": "Oyun Konumunu Seç"
+    },
+    "outputLocation": {
+      "label": "Çıktı Konumu",
+      "dialogTitle": "Çıktı Konumunu Seç"
+    },
+    "modManager": {
+      "label": "Mod Yöneticisi",
+      "none": "Yok / Vortex",
+      "mo2": "Mod Organizer 2"
+    },
+    "mo2InstancePath": {
+      "label": "MO2 Örnek Yolu",
+      "dialogTitle": "MO2 Örnek Klasörünü Seç"
+    },
+    "landscapeVertexColors": {
+      "label": "Arazi Vertex Renkleri",
+      "help": "Arazi (LAND) kayıtlarındaki gömülü vertex renk tonlamasını temizler; böylece farklı bir görünüm için tasarlanmış artık renk düzenlemesini taşımak yerine bağımsız şekilde görüntülenirler.",
+      "none": "Arazi vertex renklerine dokunma",
+      "all": "Tüm arazide temizle",
+      "snow": "Yalnızca kar sınıfındaki bir dokunun kullanıldığı yerlerde temizle"
+    },
+    "meshVertexColors": {
+      "label": "Mesh Vertex Renkleri",
+      "help": "Landscape klasöründeki mesh’lere (kayalar, uçurumlar, buzdağları vb.) gömülü vertex renk tonlamasını temizler; buna DLC01\\Landscape\\, DLC02\\Landscape\\ vb. altındaki DLC varyantları da dahildir.",
+      "none": "Mesh vertex renklerine dokunma",
+      "snowOnly": "Yalnızca oluşturulan kar mesh’lerinde",
+      "all": "Kar olmayan özgünler dahil tüm landscape mesh’lerinde"
+    },
+    "collisionMaterial": {
+      "label": "Çarpışma Malzemesi (Ayak Sesi)",
+      "help": "Oluşturulan kar mesh’lerindeki çarpışma malzemelerini kar karşılıklarına dönüştürür (şu anda yalnızca Toprak/Çimen -> Kar); böylece ayak sesleri karlı görünümle eşleşir. İşlem çarpışma parçası bazında yapılır, bu nedenle aynı mesh’teki ilgisiz malzemeler değiştirilmez.",
+      "none": "Çarpışma malzemelerine dokunma",
+      "snowOnly": "Oluşturulan kar mesh’lerine uygula"
+    },
+    "meshBlacklist": {
+      "label": "Mesh Kara Listesi",
+      "help": "Buradaki bir kuralla eşleşen mesh’ler hiçbir zaman kopyalanmaz veya yamalanmaz. Joker karakterler (*) desteklenir; örneğin \"*\\trees\\*\". Satır eklemek/kaldırmak için sağ tıklayın.",
+      "column": "Kural"
+    },
+    "editorIdKeywords": {
+      "label": "EditorID Kara Liste Anahtar Sözcükleri",
+      "help": "EditorID’sinde bu sözcüklerden biri bulunan kayıtlar (büyük/küçük harf duyarsız) tamamen atlanır; yanlış pozitif eşleşmeleri hariç tutmak için kullanışlıdır. Satır eklemek/kaldırmak için sağ tıklayın.",
+      "column": "Anahtar Sözcük"
+    },
+    "dirtCliffsSnowVariant": {
+      "label": "DirtCliffsRoots Kar Varyantı",
+      "checkbox": "DirtCliffsRoots01 dokusunun kar varyantını oluştur",
+      "help": "Doku dosyalarını oluşturur ve bunları oluşturulan DirtCliffs mesh’lerinin \"Skirt\" parçasına uygular."
+    },
+    "mountainSlabMask": {
+      "label": "MountainSlab Mask Değişimi",
+      "checkbox": "Kar adlandırılmış mesh’lerde MountainSlab01/02’yi Mask varyantlarıyla değiştir",
+      "help": "EditorID’si \"Snow\"/\"SN\" ile biten bir kayıt için, diskte mevcutsa MountainSlab01/02 kullanan tüm shape’leri karşılık gelen \"...Mask\" kardeşine yönlendirir."
+    },
+    "tab": {
+      "general": "Genel",
+      "options": "Seçenekler"
+    },
+    "language": {
+      "label": "Dil"
+    },
+    "theme": {
+      "label": "Tema",
+      "system": "Sistem",
+      "light": "Açık",
+      "dark": "Koyu"
+    },
+    "startButton": "Başlat",
+    "missingGameLocation": {
+      "message": "Lütfen oyununuzun kurulum konumunu seçin.",
+      "title": "Oyun Konumu Eksik"
+    },
+    "missingOutputLocation": {
+      "message": "Lütfen bir çıktı konumu seçin.",
+      "title": "Çıktı Konumu Eksik"
+    },
+    "missingMo2Instance": {
+      "message": "Lütfen Mod Organizer 2 örnek klasörünüzü seçin.",
+      "title": "MO2 Örneği Eksik"
+    }
+  },
+  "progress": {
+    "starting": "Başlatılıyor...",
+    "showDetails": "Ayrıntıları göster",
+    "working": "Çalışıyor...",
+    "done": "Tamamlandı.",
+    "failed": "Başarısız - aşağıdaki ayrıntılara bakın.",
+    "doneClose": "Tamamlandı - Kapat",
+    "failedClose": "Başarısız - Kapat",
+    "completion": {
+      "message": "Oluşturma tamamlandı. Henüz etkin değilse Snow Fixer’ın çıktı eklentisini mod yöneticinizin eklenti listesinden etkinleştirmeyi unutmayın.",
+      "title": "Snow Fixer"
+    }
+  }
+}

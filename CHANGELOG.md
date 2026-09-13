@@ -5,6 +5,11 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-09-13
+
+### Added
+- Turkish (`tr`) GUI translation, contributed by burako54 via Nexus.
+
 ## [1.0.2] - 2026-09-13
 
 ### Changed
