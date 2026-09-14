@@ -220,6 +220,22 @@ public sealed class ExtractOrchestrator
             _diagnostics.AddRange(textureGenerator.Diagnostics);
         }
 
+        // Flag the output as ESL (Light) whenever it actually fits that format's own new-record
+        // range, matching AutoBlend's own identical logic - opt-in rather than default is the
+        // wrong framing here, since there's no downside to a smaller plugin that still works
+        // exactly the same, only an upside (frees a real load-order slot). CanBeSmallMaster is
+        // Mutagen's own check against that ceiling - only flip the flag when it actually holds, so
+        // an unusually large run still writes a normal ESP instead of a corrupt one.
+        if (_outputMod.CanBeSmallMaster)
+        {
+            _outputMod.IsSmallMaster = true;
+        }
+        else
+        {
+            _diagnostics.Add("This run's own new records exceed the ESL limit - plugin written as a "
+                + "regular (non-ESL) ESP instead.");
+        }
+
         Report("Writing plugin...");
         var espPath = Path.Combine(_outputFolder, "SnowFixer.esp");
         _outputMod.BeginWrite.ToPath(espPath).WithNoLoadOrder().Write();
