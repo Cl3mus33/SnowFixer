@@ -274,9 +274,23 @@ public sealed class Mo2InstanceReader : IDisposable
         // Model.File path uses and what got packed into the archive - see ArchiveAwareFileProbe's
         // own identical indexing for the same fix applied to the vanilla game's own BSAs.
         var index = new Dictionary<string, IArchiveFile>(StringComparer.OrdinalIgnoreCase);
-        foreach (var archiveFile in reader.Files)
+        try
         {
-            index.TryAdd(archiveFile.Path, archiveFile);
+            // reader.Files is lazy - the first access is what actually parses the archive's own
+            // folder/file record tables, so a malformed one (reported directly: "Arithmetic
+            // operation resulted in an overflow" from deep inside Mutagen's own BsaReader) throws
+            // here, not at Archive.CreateReader time (already guarded in
+            // GetOrBuildModArchiveReaders). Same resilience as ArchiveAwareFileProbe's own
+            // identical indexing: whatever this archive already indexed before hitting the bad
+            // part stays usable, but one bad mod archive must not abort the whole run.
+            foreach (var archiveFile in reader.Files)
+            {
+                index.TryAdd(archiveFile.Path, archiveFile);
+            }
+        }
+        catch (Exception)
+        {
+            // Leave the index as whatever was collected before the failure (possibly empty).
         }
 
         _archiveIndexes[reader] = index;
