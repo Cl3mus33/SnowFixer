@@ -5,6 +5,16 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-09-14
+
+### Fixed
+- **Fixed a crash when one of the user's installed mods ships a corrupt/malformed BSA** - reported
+  directly on Nexus (Carlotii): `System.OverflowException` from deep inside Mutagen's own
+  `BsaReader.LoadFolderRecords`, aborting the whole run. `Mo2InstanceReader.GetOrBuildArchiveIndex`
+  accessed each mod archive's file list with no exception handling, unlike `ArchiveAwareFileProbe`'s
+  already-guarded equivalent for the vanilla Data folder's own archives (v1.0.1). Same fix: keep
+  whatever was indexed before the failure rather than losing the whole run over one bad archive.
+
 ## [1.0.3] - 2026-09-13
 
 ### Added
