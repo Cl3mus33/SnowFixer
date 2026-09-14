@@ -5,6 +5,13 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-09-15
+
+### Added
+- The output plugin is now automatically flagged as ESL (Light) whenever it fits that format's own
+  new-record range - requested directly on Nexus (StrayHALOMAN). Falls back to a regular ESP with a
+  diagnostic message if a run's own new records exceed the ESL limit.
+
 ## [1.0.4] - 2026-09-14
 
 ### Fixed
