@@ -52,18 +52,22 @@ private:
     PGModifiableListCtrl* m_meshBlacklistCtrl = nullptr;
     PGModifiableListCtrl* m_editorIdKeywordsCtrl = nullptr;
     wxCheckBox* m_generateDirtCliffsSnowVariantCheckbox = nullptr;
+    wxStaticText* m_mountainSlabMaskLabel = nullptr;
     wxCheckBox* m_swapMountainSlabMaskCheckbox = nullptr;
+    wxStaticText* m_mountainSlabMaskHelpText = nullptr;
     wxButton* m_okButton = nullptr;
 
     void onLanguageChanged(wxCommandEvent&);
     void onThemeChanged(wxCommandEvent&);
     void onBrowseGameLocation(wxCommandEvent&);
+    void onGameTypeChanged(wxCommandEvent&);
     void onBrowseOutputLocation(wxCommandEvent&);
     void onModManagerChanged(wxCommandEvent&);
     void onBrowseMo2Instance(wxCommandEvent&);
     void onMo2InstancePathChanged(wxCommandEvent&);
     void refreshMo2Profiles();
     void updateMo2FieldState();
+    void updateGameTypeFieldState();
     void commitPendingListEdits();
     void updateListColumnWidths();
     void onOkButtonPressed(wxCommandEvent&);

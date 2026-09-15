@@ -229,11 +229,18 @@ public sealed class ExtractOrchestrator
         // exactly the same, only an upside (frees a real load-order slot). CanBeSmallMaster is
         // Mutagen's own check against that ceiling - only flip the flag when it actually holds, so
         // an unusually large run still writes a normal ESP instead of a corrupt one.
-        if (_outputMod.CanBeSmallMaster)
+        //
+        // ESL/light plugins are a Skyrim SE-only engine feature - Mutagen's own
+        // SkyrimMod.CanBeSmallMaster returns true purely from the FormID/record-count ceiling, with
+        // no awareness that Legendary Edition's engine has no concept of the ESL flag at all.
+        // Flagging a plugin ESL for an LE run would produce something LE can't actually load
+        // correctly - confirmed directly while adding Legendary Edition support - so this only ever
+        // applies on SE.
+        if (_settings.GameType == GameType.SkyrimSE && _outputMod.CanBeSmallMaster)
         {
             _outputMod.IsSmallMaster = true;
         }
-        else
+        else if (_settings.GameType == GameType.SkyrimSE)
         {
             _diagnostics.Add("This run's own new records exceed the ESL limit - plugin written as a "
                 + "regular (non-ESL) ESP instead.");

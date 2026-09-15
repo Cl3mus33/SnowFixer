@@ -101,6 +101,7 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     gameTypeChoices.Add(SFTr("launcher.gameType.le", "Skyrim Legendary Edition"));
     m_gameTypeChoice = new wxChoice(generalPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, gameTypeChoices);
     m_gameTypeChoice->SetSelection(initParams.gameType == SFGameType::SkyrimLE ? 1 : 0);
+    m_gameTypeChoice->Bind(wxEVT_CHOICE, &LauncherWindow::onGameTypeChanged, this);
     generalSizer->Add(m_gameTypeChoice, 0, wxEXPAND | wxALL, BORDER_SIZE);
 
     // Output location
@@ -285,20 +286,29 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     // "mountainslab02" swapped for their own "...Mask" sibling), not a general texture-generation
     // engine. Off by default. Placed in this column purely to balance the two columns' height -
     // no thematic link to collision materials beyond both being small opt-in toggles.
-    collisionColumnSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.mountainSlabMask.label", "MountainSlab Mask Swap")), 0,
-        wxTOP, BORDER_SIZE * 2);
+    //
+    // Both textures are Skyrim SE's own vanilla landscape assets (part of the SE-era visual
+    // overhaul) - Legendary Edition's own vanilla Data never shipped them under any esm/esp, so
+    // this can only ever match a shape on an LE load order that imports SE-authored meshes
+    // wholesale (a ported mod) - disabled whenever Game Type is Legendary Edition, since it would
+    // otherwise look like a real option that simply never does anything for the vast majority of
+    // real LE setups.
+    m_mountainSlabMaskLabel = makeSectionLabel(generalPanel, SFTr("launcher.mountainSlabMask.label", "MountainSlab Mask Swap"));
+    collisionColumnSizer->Add(m_mountainSlabMaskLabel, 0, wxTOP, BORDER_SIZE * 2);
 
     m_swapMountainSlabMaskCheckbox = new wxCheckBox(generalPanel, wxID_ANY,
         SFTr("launcher.mountainSlabMask.checkbox", "Swap MountainSlab01/02 for their Mask variant on snow-named meshes"));
     m_swapMountainSlabMaskCheckbox->SetValue(initParams.swapMountainSlabMask);
     collisionColumnSizer->Add(m_swapMountainSlabMaskCheckbox, 0, wxTOP, BORDER_SIZE);
 
-    auto* mountainSlabMaskHelpText = new wxStaticText(generalPanel, wxID_ANY,
+    m_mountainSlabMaskHelpText = new wxStaticText(generalPanel, wxID_ANY,
         SFTr("launcher.mountainSlabMask.help",
             "For a record whose EditorID ends in \"Snow\"/\"SN\", repoints any shape using "
             "MountainSlab01/02 to its \"...Mask\" sibling, when one exists on disk."));
-    mountainSlabMaskHelpText->Wrap(HELP_WRAP_PAIRED);
-    collisionColumnSizer->Add(mountainSlabMaskHelpText, 0, wxTOP, BORDER_SIZE);
+    m_mountainSlabMaskHelpText->Wrap(HELP_WRAP_PAIRED);
+    collisionColumnSizer->Add(m_mountainSlabMaskHelpText, 0, wxTOP, BORDER_SIZE);
+
+    updateGameTypeFieldState();
 
     // DirtCliffsRoots snow variant - one specific, hardcoded texture pair ("landscape\dirtcliffs\
     // dirtcliffsroots01" composited with "landscape\snow01"), not a general texture-generation
@@ -584,6 +594,29 @@ void LauncherWindow::onModManagerChanged([[maybe_unused]] wxCommandEvent& event)
     if (m_modManagerChoice->GetSelection() == 1) {
         refreshMo2Profiles();
     }
+}
+
+void LauncherWindow::onGameTypeChanged([[maybe_unused]] wxCommandEvent& event)
+{
+    updateGameTypeFieldState();
+}
+
+// MountainSlab01/02 and their own "...Mask" sibling are Skyrim SE's own vanilla landscape assets -
+// Legendary Edition's own vanilla Data never shipped them under any esm/esp, so this option can
+// only ever do something on an LE load order that imports SE-authored meshes wholesale (a ported
+// mod), not a real scenario for the vast majority of LE users. Disabling it (rather than just
+// leaving it checkable and relying on the existing "no Mask sibling found, left as-is" diagnostic)
+// avoids it looking like a real, working option that simply never does anything for almost anyone
+// on LE.
+void LauncherWindow::updateGameTypeFieldState()
+{
+    const bool isLe = m_gameTypeChoice->GetSelection() == 1;
+    if (isLe) {
+        m_swapMountainSlabMaskCheckbox->SetValue(false);
+    }
+    m_mountainSlabMaskLabel->Enable(!isLe);
+    m_swapMountainSlabMaskCheckbox->Enable(!isLe);
+    m_mountainSlabMaskHelpText->Enable(!isLe);
 }
 
 void LauncherWindow::updateMo2FieldState()
