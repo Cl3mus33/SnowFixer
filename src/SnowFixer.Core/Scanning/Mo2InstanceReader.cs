@@ -85,15 +85,36 @@ public sealed class Mo2InstanceReader : IDisposable
             return result;
         }
 
+        // The "*"-prefix-marks-active plugins.txt format only exists for games with light-plugin
+        // (ESL) support - introduced alongside it. Skyrim LE predates that entirely: verified
+        // directly against a real MO2 LE profile's own plugins.txt, every line is a plain filename
+        // with no prefix at all, and simply being listed means active (MO2 never writes a disabled
+        // plugin into this file for LE the way it can for SE). Using the SE-only "*" check here
+        // silently produced an empty active list for LE - every mod-added plugin invisible, only
+        // the hardcoded implicit base masters remaining.
+        var requiresActiveMarker = _gameRelease == GameRelease.SkyrimSE;
+
         foreach (var rawLine in File.ReadAllLines(pluginsPath))
         {
             var line = rawLine.Trim();
-            if (line.Length == 0 || line.StartsWith('#') || !line.StartsWith('*'))
+            if (line.Length == 0 || line.StartsWith('#'))
             {
                 continue;
             }
 
-            result.Add(line[1..].Trim());
+            if (requiresActiveMarker)
+            {
+                if (!line.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                result.Add(line[1..].Trim());
+            }
+            else
+            {
+                result.Add(line);
+            }
         }
         return result;
     }
