@@ -6,6 +6,14 @@
   },
   "launcher": {
     "intro": "Vasculha a pasta Data do Skyrim SE vanilla em busca de todo registro cujo EditorID ou caminho de malha mencione \"snow\", duplica a malha vencedora para cada um, e grava um plugin apontando para as duplicatas - que assim permanecem livremente editáveis sem tocar em nenhum arquivo original.",
+    "configProfile": {
+      "label": "Perfil de configuração",
+      "load": "Carregar configuração...",
+      "saveAs": "Salvar configuração como...",
+      "loadDialogTitle": "Carregar configuração",
+      "saveDialogTitle": "Salvar configuração como",
+      "fileFilter": "Arquivos JSON (*.json)|*.json|Todos os arquivos (*.*)|*.*"
+    },
     "gameLocation": {
       "label": "Local do jogo",
       "dialogTitle": "Selecionar local do jogo"

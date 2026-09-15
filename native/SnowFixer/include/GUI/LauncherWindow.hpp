@@ -59,6 +59,9 @@ private:
 
     void onLanguageChanged(wxCommandEvent&);
     void onThemeChanged(wxCommandEvent&);
+    void onLoadConfig(wxCommandEvent&);
+    void onSaveConfigAs(wxCommandEvent&);
+    void applyLoadedParams(const SFParams& params);
     void onBrowseGameLocation(wxCommandEvent&);
     void onGameTypeChanged(wxCommandEvent&);
     void onBrowseOutputLocation(wxCommandEvent&);

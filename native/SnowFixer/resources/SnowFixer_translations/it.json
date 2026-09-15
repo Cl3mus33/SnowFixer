@@ -6,6 +6,14 @@
   },
   "launcher": {
     "intro": "Analizza la cartella Data di Skyrim SE vanilla alla ricerca di ogni record il cui EditorID o percorso mesh menzioni \"snow\", duplica la mesh vincente per ciascuno e scrive un plugin che punta ai duplicati - che restano così liberamente modificabili senza toccare alcun file originale.",
+    "configProfile": {
+      "label": "Profilo di configurazione",
+      "load": "Carica configurazione...",
+      "saveAs": "Salva configurazione con nome...",
+      "loadDialogTitle": "Carica configurazione",
+      "saveDialogTitle": "Salva configurazione con nome",
+      "fileFilter": "File JSON (*.json)|*.json|Tutti i file (*.*)|*.*"
+    },
     "gameLocation": {
       "label": "Posizione del gioco",
       "dialogTitle": "Seleziona la posizione del gioco"

@@ -6,6 +6,14 @@
   },
   "launcher": {
     "intro": "Durchsucht den Vanilla-Skyrim-SE-Data-Ordner nach jedem Datensatz, dessen EditorID oder Mesh-Pfad \"snow\" enthält, dupliziert das gewinnende Mesh für jeden davon und schreibt ein Plugin, das auf die Duplikate zeigt - so bleiben sie frei bearbeitbar, ohne die Originaldateien zu berühren.",
+    "configProfile": {
+      "label": "Konfigurationsprofil",
+      "load": "Konfiguration laden...",
+      "saveAs": "Konfiguration speichern unter...",
+      "loadDialogTitle": "Konfiguration laden",
+      "saveDialogTitle": "Konfiguration speichern unter",
+      "fileFilter": "JSON-Dateien (*.json)|*.json|Alle Dateien (*.*)|*.*"
+    },
     "gameLocation": {
       "label": "Spielort",
       "dialogTitle": "Spielort auswählen"

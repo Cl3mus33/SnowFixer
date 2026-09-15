@@ -78,6 +78,24 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     introText->Wrap(500);
     generalSizer->Add(introText, 0, wxALL, BORDER_SIZE * 2);
 
+    // Config profile - a single install (e.g. shared outside any one modlist) can still keep
+    // distinct settings per modlist by saving/loading separate JSON files here, instead of relying
+    // on %APPDATA%\SnowFixer\settings.json (which only isolates settings when each modlist gets its
+    // own copy of the exe) - requested directly after noticing several modlists sharing one exe all
+    // fight over that one file. Mirrors AutoBlend's own identical Load/Save Config pattern.
+    generalSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.configProfile.label", "Config Profile")), 0,
+        wxLEFT | wxRIGHT | wxTOP, BORDER_SIZE);
+
+    auto* loadConfigButton = new wxButton(generalPanel, wxID_ANY, SFTr("launcher.configProfile.load", "Load Config..."));
+    loadConfigButton->Bind(wxEVT_BUTTON, &LauncherWindow::onLoadConfig, this);
+    auto* saveConfigButton = new wxButton(generalPanel, wxID_ANY, SFTr("launcher.configProfile.saveAs", "Save Config As..."));
+    saveConfigButton->Bind(wxEVT_BUTTON, &LauncherWindow::onSaveConfigAs, this);
+
+    auto* configProfileSizer = new wxBoxSizer(wxHORIZONTAL);
+    configProfileSizer->Add(loadConfigButton, 0, wxALL, BORDER_SIZE);
+    configProfileSizer->Add(saveConfigButton, 0, wxALL, BORDER_SIZE);
+    generalSizer->Add(configProfileSizer, 0);
+
     // Game location
     generalSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.gameLocation.label", "Game Location")), 0,
         wxLEFT | wxRIGHT | wxTOP, BORDER_SIZE);
@@ -640,6 +658,100 @@ void LauncherWindow::onBrowseMo2Instance([[maybe_unused]] wxCommandEvent& event)
 }
 
 void LauncherWindow::onMo2InstancePathChanged([[maybe_unused]] wxCommandEvent& event) { refreshMo2Profiles(); }
+
+void LauncherWindow::onLoadConfig([[maybe_unused]] wxCommandEvent& event)
+{
+    wxFileDialog dialog(this, SFTr("launcher.configProfile.loadDialogTitle", "Load Config"), wxEmptyString, wxEmptyString,
+        SFTr("launcher.configProfile.fileFilter", "JSON files (*.json)|*.json|All files (*.*)|*.*"),
+        wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+    if (dialog.ShowModal() != wxID_OK) {
+        return;
+    }
+
+    applyLoadedParams(SFConfig::loadFrom(filesystem::path(dialog.GetPath().ToStdWstring())));
+}
+
+void LauncherWindow::onSaveConfigAs([[maybe_unused]] wxCommandEvent& event)
+{
+    wxFileDialog dialog(this, SFTr("launcher.configProfile.saveDialogTitle", "Save Config As"), wxEmptyString,
+        "SnowFixer_config.json", SFTr("launcher.configProfile.fileFilter", "JSON files (*.json)|*.json|All files (*.*)|*.*"),
+        wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+    if (dialog.ShowModal() != wxID_OK) {
+        return;
+    }
+
+    SFParams current;
+    getParams(current);
+    SFConfig::saveTo(filesystem::path(dialog.GetPath().ToStdWstring()), current);
+}
+
+void LauncherWindow::applyLoadedParams(const SFParams& params)
+{
+    // uiLanguage/uiTheme are deliberately left untouched - those are this user's own app-wide
+    // preference for how the tool looks, not part of a per-job profile (which game/output/mod
+    // manager to target), so loading a profile shouldn't change how the window you're looking at
+    // right now is themed or translated.
+    m_gameLocationTextbox->SetValue(params.gameLocation);
+    m_gameTypeChoice->SetSelection(params.gameType == SFGameType::SkyrimLE ? 1 : 0);
+    m_outputLocationTextbox->SetValue(params.outputLocation);
+
+    m_modManagerChoice->SetSelection(params.modManager == SFModManagerType::ModOrganizer2 ? 1 : 0);
+    m_mo2InstancePathTextbox->SetValue(params.mo2InstancePath);
+    refreshMo2Profiles();
+    if (!params.mo2ProfileName.empty()) {
+        m_mo2ProfileChoice->SetStringSelection(wxString(params.mo2ProfileName));
+    }
+
+    switch (params.landscapeVertexColorMode) {
+    case SFLandscapeVertexColorMode::All:
+        m_landscapeModeAllRadio->SetValue(true);
+        break;
+    case SFLandscapeVertexColorMode::SnowOnly:
+        m_landscapeModeSnowRadio->SetValue(true);
+        break;
+    default:
+        m_landscapeModeNoneRadio->SetValue(true);
+        break;
+    }
+
+    switch (params.meshVertexColorMode) {
+    case SFMeshVertexColorMode::All:
+        m_meshVertexColorModeAllRadio->SetValue(true);
+        break;
+    case SFMeshVertexColorMode::None:
+        m_meshVertexColorModeNoneRadio->SetValue(true);
+        break;
+    default:
+        m_meshVertexColorModeSnowOnlyRadio->SetValue(true);
+        break;
+    }
+
+    if (params.collisionMaterialMode == SFCollisionMaterialMode::SnowOnly) {
+        m_collisionMaterialModeSnowOnlyRadio->SetValue(true);
+    } else {
+        m_collisionMaterialModeNoneRadio->SetValue(true);
+    }
+
+    m_meshBlacklistCtrl->DeleteAllItems();
+    long meshBlacklistIndex = 0;
+    for (const auto& rule : params.meshBlacklist) {
+        m_meshBlacklistCtrl->InsertItem(meshBlacklistIndex++, wxString(rule));
+    }
+    m_meshBlacklistCtrl->InsertItem(m_meshBlacklistCtrl->GetItemCount(), "");
+
+    m_editorIdKeywordsCtrl->DeleteAllItems();
+    long editorIdKeywordIndex = 0;
+    for (const auto& keyword : params.editorIdBlacklistKeywords) {
+        m_editorIdKeywordsCtrl->InsertItem(editorIdKeywordIndex++, wxString(keyword));
+    }
+    m_editorIdKeywordsCtrl->InsertItem(m_editorIdKeywordsCtrl->GetItemCount(), "");
+
+    m_generateDirtCliffsSnowVariantCheckbox->SetValue(params.generateDirtCliffsSnowVariant);
+    m_swapMountainSlabMaskCheckbox->SetValue(params.swapMountainSlabMask);
+    updateGameTypeFieldState();
+
+    updateListColumnWidths();
+}
 
 void LauncherWindow::refreshMo2Profiles()
 {

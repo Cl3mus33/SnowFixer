@@ -5,6 +5,33 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-09-15
+
+### Added
+- **Skyrim Legendary Edition support** - new "Game Type" setting in the launcher, alongside SE.
+  Verified end to end against a real LE MO2 modlist.
+- **Config Profile** - "Load Config..."/"Save Config As..." buttons let you save/load the whole
+  launcher configuration as a standalone JSON file, instead of the single shared
+  `%APPDATA%\SnowFixer\settings.json`. Requested directly after noticing that several modlists
+  sharing one install all fight over that one file - now each can keep its own saved config
+  instead. Mirrors AutoBlend's own identical feature.
+
+### Fixed
+- Fixed `plugins.txt` parsing for LE under MO2: LE's `plugins.txt` has no `*` active-marker prefix
+  at all (every listed plugin is simply active) - Skyrim SE marks active plugins with a leading
+  `*`. Using the SE-only check unconditionally meant every mod-added plugin was invisible to Snow
+  Fixer on a real LE profile, only the hardcoded implicit base masters remaining. Found and
+  verified directly against a real Skyrim LE MO2 instance.
+- Fixed the ESL auto-flag (added in 1.0.5) being applied on Skyrim LE runs - ESL/light plugins are
+  an SE-only engine feature, and Mutagen's own `CanBeSmallMaster` check has no awareness of that,
+  so an LE run would have produced a plugin LE can't actually load correctly. Only applies on SE
+  now.
+
+### Changed
+- The MountainSlab Mask Swap option is now disabled (and its label/help text greyed out) whenever
+  Game Type is Legendary Edition: both `MountainSlab01`/`02` and their `...Mask` sibling are
+  Skyrim SE's own vanilla landscape assets, never shipped under any esm/esp on LE.
+
 ## [1.0.5] - 2026-09-15
 
 ### Added

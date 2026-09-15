@@ -6,6 +6,14 @@
   },
   "launcher": {
     "intro": "Skyrim SE’nin vanilla Data klasörünü, EditorID’sinde veya mesh yolunda kar ifadesi geçen tüm kayıtlar için tarar; her biri için kullanılan mesh’in bir kopyasını oluşturur ve kopyalara işaret eden bir eklenti yazar. Böylece hiçbir özgün varlığa dokunmadan bunlar üzerinde özgürce düzenleme yapılabilir.",
+    "configProfile": {
+      "label": "Yapılandırma Profili",
+      "load": "Yapılandırmayı Yükle...",
+      "saveAs": "Yapılandırmayı Farklı Kaydet...",
+      "loadDialogTitle": "Yapılandırmayı Yükle",
+      "saveDialogTitle": "Yapılandırmayı Farklı Kaydet",
+      "fileFilter": "JSON dosyaları (*.json)|*.json|Tüm dosyalar (*.*)|*.*"
+    },
     "gameLocation": {
       "label": "Oyun Konumu",
       "dialogTitle": "Oyun Konumunu Seç"
