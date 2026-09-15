@@ -10,8 +10,8 @@ using SnowFixer.Core.Scanning;
 namespace SnowFixer.Core.Pipeline;
 
 /// <summary>
-/// Standalone from AutoBlend. Scans the vanilla Skyrim SE Data folder (base game + official DLCs +
-/// every installed Creation Club addon) or, when MO2 is selected, the active plugin load order
+/// Standalone from AutoBlend. Scans the vanilla Skyrim Data folder (base game + official DLCs +
+/// every installed Creation Club addon, on SE) or, when MO2 is selected, the active plugin load order
 /// layered over that folder for every base record with a NIF model whose EditorID or mesh path
 /// mentions "snow". It duplicates each winning mesh right alongside the original (its own
 /// EditorID- or "_snow"-suffixed name is what keeps it from colliding with the original, not a
@@ -109,6 +109,9 @@ public sealed class ExtractOrchestrator
 
         Report("Loading game environment...");
 
+        var gameRelease = ToGameRelease(_settings.GameType);
+        var skyrimRelease = ToSkyrimRelease(_settings.GameType);
+
         string? mo2ProfileName = null;
         if (_settings.ModManager == ModManagerType.ModOrganizer2)
         {
@@ -127,7 +130,7 @@ public sealed class ExtractOrchestrator
         }
 
         using var mo2Reader = mo2ProfileName is not null
-            ? new Mo2InstanceReader(_settings.Mo2InstancePath, mo2ProfileName, GameRelease.SkyrimSE)
+            ? new Mo2InstanceReader(_settings.Mo2InstancePath, mo2ProfileName, gameRelease)
             : null;
 
         // Mutagen loads every plugin from one physical Data folder — it has no notion of MO2's
@@ -137,11 +140,11 @@ public sealed class ExtractOrchestrator
         // actually shows in-game. Meshes/textures are NOT materialized — those stay served live
         // through Mo2ModlistFileProbe.
         using var materializedLoadOrder = mo2Reader is not null
-            ? Mo2LoadOrderMaterializer.Materialize(mo2Reader, mo2ProfileName!, _dataFolder, _diagnostics)
+            ? Mo2LoadOrderMaterializer.Materialize(mo2Reader, mo2ProfileName!, _dataFolder, gameRelease, _diagnostics)
             : null;
 
         var envDataFolder = materializedLoadOrder?.DataFolder ?? _dataFolder;
-        var envBuilder = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>(GameRelease.SkyrimSE)
+        var envBuilder = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>(gameRelease)
             .WithTargetDataFolder(envDataFolder);
         _env = materializedLoadOrder is not null
             ? envBuilder.WithLoadOrder(materializedLoadOrder.LoadOrder.ToArray()).Build()
@@ -149,11 +152,11 @@ public sealed class ExtractOrchestrator
         using var envDisposable = _env;
 
         _fileProbe = mo2Reader is not null
-            ? new Mo2ModlistFileProbe(mo2Reader, _dataFolder, GameRelease.SkyrimSE)
-            : new ArchiveAwareFileProbe(_dataFolder, GameRelease.SkyrimSE);
+            ? new Mo2ModlistFileProbe(mo2Reader, _dataFolder, gameRelease)
+            : new ArchiveAwareFileProbe(_dataFolder, gameRelease);
         using var fileProbeDisposable = _fileProbe;
 
-        _outputMod = new SkyrimMod(new ModKey("SnowFixer", ModType.Plugin), SkyrimRelease.SkyrimSE);
+        _outputMod = new SkyrimMod(new ModKey("SnowFixer", ModType.Plugin), skyrimRelease);
 
         Report("Scanning records...");
 
@@ -1081,4 +1084,18 @@ public sealed class ExtractOrchestrator
 
         report($"Landscape: {_landscapesPatched} record(s) had their vertex colors cleared.", 0, 0);
     }
+
+    private static GameRelease ToGameRelease(GameType gameType) => gameType switch
+    {
+        GameType.SkyrimSE => GameRelease.SkyrimSE,
+        GameType.SkyrimLE => GameRelease.SkyrimLE,
+        _ => throw new ArgumentOutOfRangeException(nameof(gameType), gameType, null),
+    };
+
+    private static SkyrimRelease ToSkyrimRelease(GameType gameType) => gameType switch
+    {
+        GameType.SkyrimSE => SkyrimRelease.SkyrimSE,
+        GameType.SkyrimLE => SkyrimRelease.SkyrimLE,
+        _ => throw new ArgumentOutOfRangeException(nameof(gameType), gameType, null),
+    };
 }

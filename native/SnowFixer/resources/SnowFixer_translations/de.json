@@ -10,6 +10,11 @@
       "label": "Spielort",
       "dialogTitle": "Spielort auswählen"
     },
+    "gameType": {
+      "label": "Spielversion",
+      "se": "Skyrim Special Edition",
+      "le": "Skyrim Legendary Edition"
+    },
     "outputLocation": {
       "label": "Ausgabeordner",
       "dialogTitle": "Ausgabeordner auswählen"

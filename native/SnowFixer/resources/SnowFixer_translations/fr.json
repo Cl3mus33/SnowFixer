@@ -10,6 +10,11 @@
       "label": "Emplacement du jeu",
       "dialogTitle": "Sélectionner l'emplacement du jeu"
     },
+    "gameType": {
+      "label": "Type de jeu",
+      "se": "Skyrim Special Edition",
+      "le": "Skyrim Legendary Edition"
+    },
     "outputLocation": {
       "label": "Dossier de sortie",
       "dialogTitle": "Sélectionner le dossier de sortie"

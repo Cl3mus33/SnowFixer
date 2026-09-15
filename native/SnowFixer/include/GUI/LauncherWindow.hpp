@@ -33,6 +33,7 @@ private:
     wxChoice* m_languageChoice = nullptr;
     wxChoice* m_themeChoice = nullptr;
     wxTextCtrl* m_gameLocationTextbox = nullptr;
+    wxChoice* m_gameTypeChoice = nullptr;
     wxTextCtrl* m_outputLocationTextbox = nullptr;
     wxChoice* m_modManagerChoice = nullptr;
     wxStaticText* m_mo2InstancePathLabel = nullptr;

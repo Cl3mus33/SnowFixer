@@ -34,6 +34,10 @@ enum class SFCollisionMaterialMode : int { None = 0, SnowOnly = 1 };
 /// @brief Mirrors SnowFixer.Core.Configuration.ModManagerType (same integer values).
 enum class SFModManagerType : int { None = 0, ModOrganizer2 = 1 };
 
+/// @brief Mirrors SnowFixer.Core.Configuration.GameType (same integer values). LE support is new
+/// and far less battle-tested than SE.
+enum class SFGameType : int { SkyrimSE = 0, SkyrimLE = 1 };
+
 /**
  * @brief User-configurable parameters for SnowFixer, persisted as JSON. Field set and JSON
  * key names mirror SnowFixer.Core.Configuration.ExtractSettings exactly (PascalCase keys,
@@ -48,8 +52,11 @@ struct SFParams {
     /// @brief GUI color theme: "system", "light", or "dark".
     std::string uiTheme = "system";
 
-    /// @brief Skyrim Special Edition install root (the folder containing "Data").
+    /// @brief Skyrim install root (the folder containing "Data").
     std::wstring gameLocation;
+    /// @brief Skyrim Special Edition or Legendary Edition. LE support is new and far less
+    /// battle-tested than SE.
+    SFGameType gameType = SFGameType::SkyrimSE;
     /// @brief Folder the extraction writes its generated mod (meshes + SnowFixer.esp + log) into.
     std::wstring outputLocation;
 

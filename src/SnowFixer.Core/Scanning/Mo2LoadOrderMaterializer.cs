@@ -1,3 +1,4 @@
+using Mutagen.Bethesda;
 using Mutagen.Bethesda.Plugins;
 
 namespace SnowFixer.Core.Scanning;
@@ -18,17 +19,23 @@ public sealed class Mo2LoadOrderMaterializer
     // build an environment missing Skyrim.esm itself (and the official DLCs), so every base-game
     // record - the vast majority of what this tool cares about - would appear to not exist at all.
     //
-    // _ResourcePack.esl is the same story: Anniversary Edition's shared asset container, force-
-    // loaded by the game engine itself and never listed in plugins.txt, same as the five above.
-    private static readonly string[] ImplicitBaseMasterFileNames =
+    // _ResourcePack.esl is the same story, but Anniversary Edition (and its shared asset container)
+    // only exists on SE - Legendary Edition never got ESL support in the base game at all, so that
+    // file genuinely doesn't exist there. Listing it unconditionally would just produce a harmless
+    // "not found anywhere, skipped" warning on every LE run - excluded there instead.
+    private static readonly string[] ImplicitBaseMasterFileNamesCommon =
     {
         "Skyrim.esm",
         "Update.esm",
         "Dawnguard.esm",
         "HearthFires.esm",
         "Dragonborn.esm",
-        "_ResourcePack.esl",
     };
+
+    private static IEnumerable<string> ImplicitBaseMasterFileNames(GameRelease gameRelease) =>
+        gameRelease == GameRelease.SkyrimSE
+            ? ImplicitBaseMasterFileNamesCommon.Append("_ResourcePack.esl")
+            : ImplicitBaseMasterFileNamesCommon;
 
     public sealed class MaterializedLoadOrder : IDisposable
     {
@@ -54,7 +61,7 @@ public sealed class Mo2LoadOrderMaterializer
         }
     }
 
-    public static MaterializedLoadOrder Materialize(Mo2InstanceReader reader, string profileName, string vanillaDataFolder, List<string> warnings)
+    public static MaterializedLoadOrder Materialize(Mo2InstanceReader reader, string profileName, string vanillaDataFolder, GameRelease gameRelease, List<string> warnings)
     {
         var activePlugins = reader.ReadActivePlugins(profileName);
         var tempFolder = Path.Combine(Path.GetTempPath(), "SnowFixer_LoadOrder_" + Guid.NewGuid().ToString("N"));
@@ -63,7 +70,7 @@ public sealed class Mo2LoadOrderMaterializer
         // Base masters go first, in their fixed canonical order, and only once - plugins.txt
         // normally never lists them, but if a given setup unusually does, don't double them up.
         var alreadyListed = new HashSet<string>(activePlugins, StringComparer.OrdinalIgnoreCase);
-        var orderedPluginNames = ImplicitBaseMasterFileNames
+        var orderedPluginNames = ImplicitBaseMasterFileNames(gameRelease)
             .Where(name => !alreadyListed.Contains(name))
             .Concat(activePlugins)
             .ToList();

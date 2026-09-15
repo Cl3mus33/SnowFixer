@@ -10,6 +10,11 @@
       "label": "Posizione del gioco",
       "dialogTitle": "Seleziona la posizione del gioco"
     },
+    "gameType": {
+      "label": "Versione del gioco",
+      "se": "Skyrim Special Edition",
+      "le": "Skyrim Legendary Edition"
+    },
     "outputLocation": {
       "label": "Cartella di output",
       "dialogTitle": "Seleziona la cartella di output"

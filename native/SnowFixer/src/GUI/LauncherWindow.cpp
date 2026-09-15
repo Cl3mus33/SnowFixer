@@ -91,6 +91,18 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     gameLocationSizer->Add(gameBrowseButton, 0, wxALL, BORDER_SIZE);
     generalSizer->Add(gameLocationSizer, 0, wxEXPAND);
 
+    // Game type - LE support is new and far less battle-tested than SE (the vast majority of this
+    // tool's own verification has been against real SE modlists).
+    generalSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.gameType.label", "Game Type")), 0,
+        wxLEFT | wxRIGHT | wxTOP, BORDER_SIZE);
+
+    wxArrayString gameTypeChoices;
+    gameTypeChoices.Add(SFTr("launcher.gameType.se", "Skyrim Special Edition"));
+    gameTypeChoices.Add(SFTr("launcher.gameType.le", "Skyrim Legendary Edition"));
+    m_gameTypeChoice = new wxChoice(generalPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, gameTypeChoices);
+    m_gameTypeChoice->SetSelection(initParams.gameType == SFGameType::SkyrimLE ? 1 : 0);
+    generalSizer->Add(m_gameTypeChoice, 0, wxEXPAND | wxALL, BORDER_SIZE);
+
     // Output location
     generalSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.outputLocation.label", "Output Location")), 0,
         wxLEFT | wxRIGHT | wxTOP, BORDER_SIZE);
@@ -469,6 +481,7 @@ void LauncherWindow::getParams(SFParams& outParams) const
     }
 
     outParams.gameLocation = m_gameLocationTextbox->GetValue().ToStdWstring();
+    outParams.gameType = m_gameTypeChoice->GetSelection() == 1 ? SFGameType::SkyrimLE : SFGameType::SkyrimSE;
     outParams.outputLocation = m_outputLocationTextbox->GetValue().ToStdWstring();
 
     outParams.modManager

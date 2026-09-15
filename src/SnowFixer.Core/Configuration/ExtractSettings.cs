@@ -16,10 +16,14 @@ public sealed class ExtractSettings
     /// <summary>GUI color theme (native shell only): "system", "light", or "dark".</summary>
     public string UiTheme { get; set; } = "system";
 
-    /// <summary>Skyrim Special Edition install root (the folder containing "Data", not the Data
-    /// folder itself) - matches AutoBlend.Core.Pipeline.PatchOrchestrator's own GameLocation
-    /// convention.</summary>
+    /// <summary>Skyrim install root (the folder containing "Data", not the Data folder itself) -
+    /// matches AutoBlend.Core.Pipeline.PatchOrchestrator's own GameLocation convention.</summary>
     public string GameLocation { get; set; } = string.Empty;
+
+    /// <summary>Skyrim Special Edition or Legendary Edition - same GameType/conversion pattern as
+    /// AutoBlend.Core.Configuration.GameType. LE support is new and far less battle-tested than SE
+    /// (the vast majority of this tool's own verification has been against real SE modlists).</summary>
+    public GameType GameType { get; set; } = GameType.SkyrimSE;
 
     /// <summary>Folder the extraction writes its generated mod (meshes + SnowFixer.esp +
     /// log) into.</summary>

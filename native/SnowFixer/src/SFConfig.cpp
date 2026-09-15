@@ -57,6 +57,9 @@ auto SFConfig::loadFrom(const filesystem::path& configFilePath) -> SFParams
         if (configJ.contains("GameLocation")) {
             params.gameLocation = StringUtil::utf8toUTF16(configJ["GameLocation"].get<string>());
         }
+        if (configJ.contains("GameType")) {
+            params.gameType = static_cast<SFGameType>(configJ["GameType"].get<int>());
+        }
         if (configJ.contains("OutputLocation")) {
             params.outputLocation = StringUtil::utf8toUTF16(configJ["OutputLocation"].get<string>());
         }
@@ -111,6 +114,7 @@ auto SFConfig::toJson(const SFParams& params) -> nlohmann::json
     configJ["UiLanguage"] = params.uiLanguage;
     configJ["UiTheme"] = params.uiTheme;
     configJ["GameLocation"] = StringUtil::utf16toUTF8(params.gameLocation);
+    configJ["GameType"] = static_cast<int>(params.gameType);
     configJ["OutputLocation"] = StringUtil::utf16toUTF8(params.outputLocation);
     configJ["LandscapeVertexColorMode"] = static_cast<int>(params.landscapeVertexColorMode);
     configJ["MeshVertexColorMode"] = static_cast<int>(params.meshVertexColorMode);
