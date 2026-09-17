@@ -94,6 +94,8 @@ merge, which `SnowFixer_dotnetlib` resolution depends on).
   Fixes](https://www.nexusmods.com/skyrimspecialedition/mods/131170), whose own "no decal" approach
   (needed to avoid z-fighting with decal-based dynamic snow shaders like Simplicity of Snow/BDS3)
   inspired this simpler, mesh-only variant.
+- Thanks to [ra2phoenix](https://www.nexusmods.com/profile/ra2phoenix) for their contributions and
+  ideas toward fixing snow-related visual issues.
 
 ## License
 
