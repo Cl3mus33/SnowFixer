@@ -89,15 +89,11 @@ merge, which `SnowFixer_dotnetlib` resolution depends on).
   files.
 - [DirectXTex](https://github.com/microsoft/DirectXTex) for texture compositing/compression.
 - The alpha-blending concept this whole family of tools (and AutoBlend before it) is built around
-  traces back to the Majestic Landscapes modding standard. Several of Snow Fixer's own features -
-  Hide Decal Shapes, MountainSlab Mask Swap, and the DirtCliffsRoots Snow Variant - are built on
-  techniques and ideas from **ra2phoenix**'s own landscape-blending mods, in particular
-  [Enhanced Rocks and Mountains - Blending Patch And Other
-  Fixes](https://www.nexusmods.com/skyrimspecialedition/mods/131170) (Hide Decal Shapes specifically
-  mirrors its own "no decal" approach, needed to avoid z-fighting with decal-based dynamic snow
-  shaders like Simplicity of Snow/BDS3). Snow Fixer's own contribution is automating those ideas so
-  they apply correctly to any load order, rather than being hand-authored for one specific texture
-  pack.
+  traces back to the Majestic Landscapes modding standard; the "Hide Decal Shapes" feature is
+  modeled on [Enhanced Rocks and Mountains - Blending Patch And Other
+  Fixes](https://www.nexusmods.com/skyrimspecialedition/mods/131170), whose own "no decal" approach
+  (needed to avoid z-fighting with decal-based dynamic snow shaders like Simplicity of Snow/BDS3)
+  inspired this simpler, mesh-only variant.
 
 ## License
 
