@@ -5,6 +5,8 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-09-17
+
 ### Fixed
 - **Fixed the launcher window being taller than the screen on smaller displays** - reported
   directly on Nexus: with every setting added since the "General" tab was first laid out (Config
