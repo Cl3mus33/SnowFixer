@@ -32,7 +32,7 @@ public sealed class Mo2LoadOrderMaterializer
         "Dragonborn.esm",
     };
 
-    private static IEnumerable<string> ImplicitBaseMasterFileNames(GameRelease gameRelease) =>
+    internal static IEnumerable<string> ImplicitBaseMasterFileNames(GameRelease gameRelease) =>
         gameRelease == GameRelease.SkyrimSE
             ? ImplicitBaseMasterFileNamesCommon.Append("_ResourcePack.esl")
             : ImplicitBaseMasterFileNamesCommon;

@@ -55,7 +55,7 @@ internal enum SnowTextureConvention
 public sealed class DirtCliffsSnowVariantGenerator
 {
     [DllImport("SnowFixerTexTools.dll", CharSet = CharSet.Unicode)]
-    private static extern int sf_composite_alpha_diffuse(string colorSourcePath, string alphaSourcePath, string dstPath, int isPbr);
+    private static extern int sf_composite_alpha_diffuse(string colorSourcePath, string alphaSourcePath, string dstPath, int isPbr, int isLe);
 
     private const string VanillaSnowDiffuse = @"textures\landscape\snow01.dds";
     private const string PbrSnowDiffuse = @"textures\pbr\landscape\snow01.dds";
@@ -78,6 +78,7 @@ public sealed class DirtCliffsSnowVariantGenerator
 
     private readonly IGameFileProbe _fileProbe;
     private readonly string _outputLocation;
+    private readonly bool _isLe;
     private readonly List<string> _diagnostics = new();
 
     /// <summary>True once the diffuse itself was successfully written - siblings/json mirroring are
@@ -86,10 +87,11 @@ public sealed class DirtCliffsSnowVariantGenerator
 
     public IReadOnlyList<string> Diagnostics => _diagnostics;
 
-    public DirtCliffsSnowVariantGenerator(IGameFileProbe fileProbe, string outputLocation)
+    public DirtCliffsSnowVariantGenerator(IGameFileProbe fileProbe, string outputLocation, bool isLe = false)
     {
         _fileProbe = fileProbe;
         _outputLocation = outputLocation;
+        _isLe = isLe;
     }
 
     /// <summary>Generates the vanilla/Complex-Material variant whenever "landscape\snow01" exists
@@ -155,7 +157,7 @@ public sealed class DirtCliffsSnowVariantGenerator
             var outputFullPath = Path.Combine(_outputLocation, outputRelative);
             Directory.CreateDirectory(Path.GetDirectoryName(outputFullPath)!);
 
-            var resultCode = sf_composite_alpha_diffuse(extractedColorTempPath, alphaTempPath, outputFullPath, isPbr ? 1 : 0);
+            var resultCode = sf_composite_alpha_diffuse(extractedColorTempPath, alphaTempPath, outputFullPath, isPbr ? 1 : 0, _isLe ? 1 : 0);
             if (resultCode != 0)
             {
                 _diagnostics.Add($"DirtCliffsRoots snow variant: SnowFixerTexTools failed for '{colorSourceRelative}' (code {resultCode}).");

@@ -74,7 +74,7 @@ auto loadAsRgba8(const wchar_t* path, ScratchImage& out, bool& outWasWic) -> HRE
 // installed still lines up correctly. Recompressed to BC1 sRGB (isPbr) or BC7 (otherwise), same
 // convention as AutoBlend's own stripAlphaToOpaque, for the same reason: Skyrim's PBR pipeline
 // reads a PBR diffuse as BC1 sRGB specifically, not BC7.
-auto compositeAlphaDiffuse(const wchar_t* colorSourcePath, const wchar_t* alphaSourcePath, const wchar_t* dstPath, bool isPbr) -> int
+auto compositeAlphaDiffuse(const wchar_t* colorSourcePath, const wchar_t* alphaSourcePath, const wchar_t* dstPath, bool isPbr, bool isLe) -> int
 {
     ScratchImage colorImage;
     bool colorWasWic = false;
@@ -138,7 +138,11 @@ auto compositeAlphaDiffuse(const wchar_t* colorSourcePath, const wchar_t* alphaS
         return 7;
     }
 
-    const DXGI_FORMAT targetFormat = isPbr ? DXGI_FORMAT_BC1_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
+    // BC7 needs the DX10-extended DDS header, which Legendary Edition's own engine can't read at
+    // all - confirmed directly (see AutoBlend's own identical fix): every BC7 texture generated on
+    // a real LE modlist came out unreadable in game. BC3 is the direct legacy equivalent (4
+    // channels incl. alpha) and matches the format every real vanilla LE texture already uses.
+    const DXGI_FORMAT targetFormat = isPbr ? DXGI_FORMAT_BC1_UNORM_SRGB : isLe ? DXGI_FORMAT_BC3_UNORM : DXGI_FORMAT_BC7_UNORM;
 
     ScratchImage recompressed;
     HRESULT compressHr = E_FAIL;
@@ -176,14 +180,14 @@ auto compositeAlphaDiffuse(const wchar_t* colorSourcePath, const wchar_t* alphaS
  * CreateProcess-hook reason AutoBlend's own equivalent DLL documents.
  */
 extern "C" __declspec(dllexport) int __stdcall sf_composite_alpha_diffuse(
-    const wchar_t* colorSourcePath, const wchar_t* alphaSourcePath, const wchar_t* dstPath, int isPbr)
+    const wchar_t* colorSourcePath, const wchar_t* alphaSourcePath, const wchar_t* dstPath, int isPbr, int isLe)
 {
     if (colorSourcePath == nullptr || alphaSourcePath == nullptr || dstPath == nullptr) {
         return -1;
     }
 
     try {
-        return compositeAlphaDiffuse(colorSourcePath, alphaSourcePath, dstPath, isPbr != 0);
+        return compositeAlphaDiffuse(colorSourcePath, alphaSourcePath, dstPath, isPbr != 0, isLe != 0);
     } catch (...) {
         return -2;
     }

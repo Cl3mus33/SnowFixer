@@ -5,6 +5,24 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-09-17
+
+### Fixed
+- **Fixed disabled plugins being included as masters when Mod Manager is None/Vortex** - reported
+  directly on Nexus: a plugin disabled in the user's own plugins.txt still got treated as a
+  winning-override source and ended up as a master of `SnowFixer.esp` (also the root cause of
+  xEdit's own "Modules with extended FormID range should always have the Game Master as their
+  first master" warning on the generated ESL). Without an explicit load order, Mutagen's own
+  auto-detection imports every plugin physically present in the Data folder regardless of its real
+  enabled state - the real plugins.txt is now read first and only its actually-enabled entries (plus
+  the game's own implicit base masters) are passed through explicitly. Same fix AutoBlend already
+  had for this identical gap.
+- **Fixed AutoBlend-generated/composited textures being unreadable on Skyrim Legendary Edition** -
+  `DirtCliffsSnowVariantGenerator`'s native texture compositing always recompressed to BC7, which
+  needs a DDS header format LE's engine can't read at all (see AutoBlend's own identical fix for the
+  full write-up); now falls back to BC3 (LE's own native format) when Game Type is Legendary
+  Edition.
+
 ## [1.0.7] - 2026-09-17
 
 ### Added

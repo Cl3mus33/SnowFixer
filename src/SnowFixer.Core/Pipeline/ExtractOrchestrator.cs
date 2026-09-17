@@ -2,6 +2,7 @@ using Mutagen.Bethesda;
 using Mutagen.Bethesda.Environments;
 using Mutagen.Bethesda.Plugins.Exceptions;
 using Mutagen.Bethesda.Plugins;
+using Mutagen.Bethesda.Plugins.Order;
 using Mutagen.Bethesda.Skyrim;
 using nifly;
 using SnowFixer.Core.Configuration;
@@ -195,12 +196,56 @@ public sealed class ExtractOrchestrator
             ? Mo2LoadOrderMaterializer.Materialize(mo2Reader, mo2ProfileName!, _dataFolder, gameRelease, _diagnostics)
             : null;
 
+        // Without an explicit load order, Mutagen's own auto-detection (the branch below this used
+        // to always take for a non-MO2/Vortex setup) imports EVERY plugin it finds physically
+        // present in the Data folder, regardless of whether plugins.txt actually marks it active -
+        // confirmed directly against Mutagen's own source (LoadOrderImporter.Import calls
+        // Importer.Import for every listing unconditionally, only ever carrying the listing's own
+        // Enabled flag through as inert metadata on the result). Reported directly on Nexus: a
+        // disabled plugin still got treated as a winning-override source and ended up as a master
+        // of SnowFixer's own output. Reading the real plugins.txt ourselves first and passing only
+        // the actually-enabled entries closes this the same way Mo2LoadOrderMaterializer already
+        // does for MO2 - falling back to Mutagen's own auto-detection only if this can't be read at
+        // all, rather than ever silently including disabled plugins' own records. Same fix as
+        // AutoBlend's own identical one.
+        ModKey[]? activeLoadOrder = null;
+        if (materializedLoadOrder is null)
+        {
+            try
+            {
+                // PluginListings.LoadOrderListings itself has no notion of the game's own implicit
+                // base masters (Skyrim.esm and the official DLCs are never actually written to
+                // plugins.txt by the game itself, since they can't be disabled) - without adding
+                // them explicitly here too (same list, same reasoning as
+                // Mo2LoadOrderMaterializer's own identical one), an active-only list would scan zero
+                // records at all, since nothing in plugins.txt itself names Skyrim.esm.
+                var activePluginNames = PluginListings.LoadOrderListings(gameRelease, _dataFolder, throwOnMissingMods: false)
+                    .Where(l => l.Enabled)
+                    .Select(l => l.ModKey.FileName.String)
+                    .ToList();
+                var alreadyListed = new HashSet<string>(activePluginNames, StringComparer.OrdinalIgnoreCase);
+                activeLoadOrder = Mo2LoadOrderMaterializer.ImplicitBaseMasterFileNames(gameRelease)
+                    .Where(name => !alreadyListed.Contains(name))
+                    .Concat(activePluginNames)
+                    .Select(name => ModKey.FromNameAndExtension(name))
+                    .ToArray();
+            }
+            catch (Exception ex)
+            {
+                _diagnostics.Add("Could not read the game's own plugins.txt to filter to only active plugins "
+                    + $"({ex.Message}) - falling back to Mutagen's own auto-detection, which may incorrectly "
+                    + "include disabled plugins' own records.");
+            }
+        }
+
         var envDataFolder = materializedLoadOrder?.DataFolder ?? _dataFolder;
         var envBuilder = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>(gameRelease)
             .WithTargetDataFolder(envDataFolder);
         _env = materializedLoadOrder is not null
             ? envBuilder.WithLoadOrder(materializedLoadOrder.LoadOrder.ToArray()).Build()
-            : envBuilder.Build();
+            : activeLoadOrder is not null
+                ? envBuilder.WithLoadOrder(activeLoadOrder).Build()
+                : envBuilder.Build();
         using var envDisposable = _env;
 
         _fileProbe = mo2Reader is not null
@@ -269,7 +314,7 @@ public sealed class ExtractOrchestrator
         if (_settings.GenerateDirtCliffsSnowVariant)
         {
             Report("Generating DirtCliffsRoots snow variant texture...");
-            var textureGenerator = new DirtCliffsSnowVariantGenerator(_fileProbe, _outputFolder);
+            var textureGenerator = new DirtCliffsSnowVariantGenerator(_fileProbe, _outputFolder, _settings.GameType == GameType.SkyrimLE);
             textureGenerator.Run();
             dirtCliffsSnowVariantGenerated = textureGenerator.Generated;
             _diagnostics.AddRange(textureGenerator.Diagnostics);
