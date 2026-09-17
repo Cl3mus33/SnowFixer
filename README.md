@@ -88,6 +88,12 @@ merge, which `SnowFixer_dotnetlib` resolution depends on).
 - [Mutagen](https://github.com/Mutagen-Modding/Mutagen) for reading and writing Bethesda plugin
   files.
 - [DirectXTex](https://github.com/microsoft/DirectXTex) for texture compositing/compression.
+- The alpha-blending concept this whole family of tools (and AutoBlend before it) is built around
+  traces back to the Majestic Landscapes modding standard; the "Hide Decal Shapes" feature is
+  modeled on [Enhanced Rocks and Mountains - Blending Patch And Other
+  Fixes](https://www.nexusmods.com/skyrimspecialedition/mods/131170), whose own "no decal" approach
+  (needed to avoid z-fighting with decal-based dynamic snow shaders like Simplicity of Snow/BDS3)
+  inspired this simpler, mesh-only variant.
 
 ## License
 

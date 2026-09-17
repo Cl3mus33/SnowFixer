@@ -346,6 +346,30 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     dirtCliffsSnowVariantHelpText->Wrap(HELP_WRAP_PAIRED);
     dirtCliffsColumnSizer->Add(dirtCliffsSnowVariantHelpText, 0, wxTOP, BORDER_SIZE);
 
+    // Hide Rocks01/SnowRocks01-textured shapes on mountain/rock/tundra meshes - Skyrim's own dynamic
+    // snow shaders (Simplicity of Snow, BDS3, ...) render via the decal pipeline too, so these small
+    // detail-rock shapes z-fight with it. NOT applied to DirtCliffs meshes - their own "Skirt" shape
+    // must stay (that's what DirtCliffsRoots Snow Variant retextures for snow instead). Hides the
+    // shape (NiAVObject Hidden flag) instead of deleting it, so block indices - and any plugin-side
+    // AltTexture index - never move. Off by default. Modeled on "Enhanced Rocks and Mountains -
+    // Blending Patch And Other Fixes" (nexusmods.com/skyrimspecialedition/mods/131170) - see credits.
+    dirtCliffsColumnSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.hideDecalShapes.label", "Hide Decal Shapes")), 0,
+        wxTOP, BORDER_SIZE * 2);
+
+    m_hideDecalShapesCheckbox = new wxCheckBox(generalPanel, wxID_ANY,
+        SFTr("launcher.hideDecalShapes.checkbox", "Hide Rocks01/SnowRocks01 shapes on mountain/rock/tundra meshes"));
+    m_hideDecalShapesCheckbox->SetValue(initParams.hideDecalShapes);
+    dirtCliffsColumnSizer->Add(m_hideDecalShapesCheckbox, 0, wxTOP, BORDER_SIZE);
+
+    auto* hideDecalShapesHelpText = new wxStaticText(generalPanel, wxID_ANY,
+        SFTr("launcher.hideDecalShapes.help",
+            "Avoids z-fighting with Skyrim's own decal-based dynamic snow shaders by hiding any shape "
+            "textured with \"Rocks01\"/\"SnowRocks01\", on mountain/rock/tundra meshes only. Hides the "
+            "shape instead of deleting it, so no plugin changes are needed. Does not affect DirtCliffs "
+            "meshes."));
+    hideDecalShapesHelpText->Wrap(HELP_WRAP_PAIRED);
+    dirtCliffsColumnSizer->Add(hideDecalShapesHelpText, 0, wxTOP, BORDER_SIZE);
+
     collisionDirtCliffsRowSizer->Add(collisionColumnSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, BORDER_SIZE);
     collisionDirtCliffsRowSizer->Add(dirtCliffsColumnSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, BORDER_SIZE);
     generalSizer->Add(collisionDirtCliffsRowSizer, 0, wxEXPAND | wxBOTTOM, BORDER_SIZE);
@@ -561,6 +585,7 @@ void LauncherWindow::getParams(SFParams& outParams) const
 
     outParams.generateDirtCliffsSnowVariant = m_generateDirtCliffsSnowVariantCheckbox->GetValue();
     outParams.swapMountainSlabMask = m_swapMountainSlabMaskCheckbox->GetValue();
+    outParams.hideDecalShapes = m_hideDecalShapesCheckbox->GetValue();
 }
 
 void LauncherWindow::onLanguageChanged([[maybe_unused]] wxCommandEvent& event)
@@ -748,6 +773,7 @@ void LauncherWindow::applyLoadedParams(const SFParams& params)
 
     m_generateDirtCliffsSnowVariantCheckbox->SetValue(params.generateDirtCliffsSnowVariant);
     m_swapMountainSlabMaskCheckbox->SetValue(params.swapMountainSlabMask);
+    m_hideDecalShapesCheckbox->SetValue(params.hideDecalShapes);
     updateGameTypeFieldState();
 
     updateListColumnWidths();

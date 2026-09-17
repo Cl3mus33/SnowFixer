@@ -58,6 +58,21 @@ public sealed class ExtractSettings
     /// as <see cref="GenerateDirtCliffsSnowVariant"/>.</summary>
     public bool SwapMountainSlabMask { get; set; }
 
+    /// <summary>Hides (NiAVObject Hidden flag) any shape under a landscape\mountains\, landscape\rocks\,
+    /// or landscape\tundra\ mesh whose diffuse texture is "Rocks01" or "SnowRocks01" - see
+    /// <see cref="Pipeline.ExtractOrchestrator.HideDecalShapes"/>. Skyrim's own dynamic snow shader
+    /// (Simplicity of Snow, BDS3, ...) renders via the decal pipeline, so these small-rock detail
+    /// shapes z-fight with it. Detection is by texture name, not the NIF's own SLSF1_Decal shader
+    /// flag - that flag doesn't reliably mark every shape that needs hiding (confirmed empirically
+    /// against vanilla meshes). DirtCliffs meshes are NOT touched by this - their own "Skirt" shape
+    /// must stay (see <see cref="GenerateDirtCliffsSnowVariant"/>). Hiding rather than deleting the
+    /// block needs no plugin-side changes at all (no AltTexture reindexing) - opt-in, off by default,
+    /// same reasoning as <see cref="GenerateDirtCliffsSnowVariant"/>/<see cref="SwapMountainSlabMask"/>.
+    /// Modeled on "Enhanced Rocks and Mountains - Blending Patch And Other Fixes"
+    /// (nexusmods.com/skyrimspecialedition/mods/131170), whose own "No Decals" patches take the
+    /// heavier ESP-editing route this setting avoids.</summary>
+    public bool HideDecalShapes { get; set; }
+
     /// <summary>None (scan the raw Data folder directly - nothing extra to configure) or
     /// ModOrganizer2 (requires <see cref="Mo2InstancePath"/> to reconstruct its virtual file
     /// system, layering every enabled mod on top of the vanilla Data folder).</summary>

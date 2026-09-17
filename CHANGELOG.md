@@ -5,6 +5,45 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-09-17
+
+### Added
+- **Hide Decal Shapes** - new opt-in option that hides (rather than deletes) any shape textured
+  with "Rocks01" or "SnowRocks01" on a landscape\mountains\, landscape\rocks\, or
+  landscape\tundra\ mesh, to avoid z-fighting with Skyrim's own decal-based dynamic snow shaders
+  (Simplicity of Snow, BDS3, ...). Detection is by diffuse texture name, not the NIF's own
+  SLSF1_Decal shader flag - that flag doesn't reliably mark every shape that needs hiding
+  (confirmed empirically: vanilla RockCliff08 has two shapes both textured "Rocks01" - an opaque
+  base pass and a decal-flagged pass on top of it - and only the second carries the flag, yet both
+  need hiding to avoid leaving the base pass behind as pointless duplicate geometry). DirtCliffs
+  meshes are NOT touched by this - their own "Skirt" shape must stay, since that's what
+  DirtCliffsRoots Snow Variant retextures for snow instead. Verified directly against vanilla
+  meshes extracted from the base game's own archives. Modeled on [Enhanced Rocks and Mountains -
+  Blending Patch And Other Fixes](https://www.nexusmods.com/skyrimspecialedition/mods/131170),
+  whose own fix for this
+  edits the plugin's Alternate Textures instead - this needs no plugin changes at all, since every
+  shape stays in the mesh (just hidden) and block indices never move.
+
+### Fixed
+- **Fixed reading meshes/textures from compressed Skyrim Legendary Edition archives** - a real bug
+  in the pinned Mutagen.Bethesda 0.54.4 itself: opening a compressed file entry from an LE-format
+  (BSA v103) archive threw `ArchiveException: "InflaterInputStream Length is not supported"` from
+  deep inside Mutagen's own BSA reader, silently skipping every affected file. Both `Skyrim -
+  Textures.bsa` and `Skyrim - Meshes.bsa` (vanilla LE) are compressed this way, so almost nothing
+  from the base game was ever actually readable on LE until now - reads now fall back to manually
+  decompressing the entry (see `ManualArchiveExtractor`) when this specific error occurs. Special
+  Edition's own archives are unaffected (confirmed empirically) and take the normal path exactly
+  as before.
+- **Fixed a real risk of Snow Fixer deleting a user's actual mod files** - reported directly on
+  Nexus: pointing Output Location at the game's own Data folder (instead of an empty, dedicated
+  output folder) caused the "wipe previous run's own output before regenerating" step to delete the
+  user's entire real `meshes\` folder - every mod's own meshes (skeletons, animation replacers, ...)
+  gone. Two guards now: Output Location can no longer be set to the game's own Data folder at all
+  (immediate, specific error), and more generally, an existing `meshes\` folder under Output
+  Location is only ever wiped if a `SnowFixer.esp`/`SnowFixer-log.txt` from a previous run is
+  already there to prove it's actually this tool's own prior output - any other folder is left
+  alone, with a clear error explaining why, instead of being silently deleted.
+
 ## [1.0.6] - 2026-09-15
 
 ### Added

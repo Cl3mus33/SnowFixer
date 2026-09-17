@@ -76,6 +76,11 @@
       "checkbox": "Swap MountainSlab01/02 for their Mask variant on snow-named meshes",
       "help": "For a record whose EditorID ends in \"Snow\"/\"SN\", repoints any shape using MountainSlab01/02 to its \"...Mask\" sibling, when one exists on disk."
     },
+    "hideDecalShapes": {
+      "label": "Hide Decal Shapes",
+      "checkbox": "Hide Rocks01/SnowRocks01 shapes on mountain/rock/tundra meshes",
+      "help": "Avoids z-fighting with Skyrim's own decal-based dynamic snow shaders by hiding any shape textured with \"Rocks01\"/\"SnowRocks01\", on mountain/rock/tundra meshes only. Hides the shape instead of deleting it, so no plugin changes are needed. Does not affect DirtCliffs meshes."
+    },
     "tab": {
       "general": "General",
       "options": "Options"

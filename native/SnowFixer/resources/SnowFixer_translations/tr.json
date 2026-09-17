@@ -76,6 +76,11 @@
       "checkbox": "Kar adlandırılmış mesh’lerde MountainSlab01/02’yi Mask varyantlarıyla değiştir",
       "help": "EditorID’si \"Snow\"/\"SN\" ile biten bir kayıt için, diskte mevcutsa MountainSlab01/02 kullanan tüm shape’leri karşılık gelen \"...Mask\" kardeşine yönlendirir."
     },
+    "hideDecalShapes": {
+      "label": "Decal Shape'leri Gizle",
+      "checkbox": "Dağ/kaya/tundra mesh’lerinde Rocks01/SnowRocks01 shape’lerini gizle",
+      "help": "Skyrim’in kendi decal tabanlı dinamik kar shader’larıyla z-fighting’i, dokusu \"Rocks01\"/\"SnowRocks01\" olan her shape’i gizleyerek önler - yalnızca dağ/kaya/tundra mesh’lerinde. Shape’i silmek yerine gizler, bu yüzden eklentide herhangi bir değişiklik gerekmez. DirtCliffs mesh’lerini etkilemez."
+    },
     "tab": {
       "general": "Genel",
       "options": "Seçenekler"

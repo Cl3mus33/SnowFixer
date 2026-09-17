@@ -76,6 +76,11 @@
       "checkbox": "Sostituisci MountainSlab01/02 con la loro variante Mask sulle mesh con nome neve",
       "help": "Per un record il cui EditorID termina in \"Snow\"/\"SN\", reindirizza qualsiasi shape che usa MountainSlab01/02 alla sua variante \"...Mask\", se presente sul disco."
     },
+    "hideDecalShapes": {
+      "label": "Nascondi shape Decal",
+      "checkbox": "Nascondi le shape Rocks01/SnowRocks01 sulle mesh montagne/rocce/tundra",
+      "help": "Evita lo z-fighting con gli shader di neve dinamica di Skyrim, anch'essi basati sul rendering decal, nascondendo qualsiasi shape con texture \"Rocks01\"/\"SnowRocks01\", solo sulle mesh montagne/rocce/tundra. Nasconde la shape invece di eliminarla, quindi non è necessaria alcuna modifica al plugin. Non riguarda le mesh DirtCliffs."
+    },
     "tab": {
       "general": "Generale",
       "options": "Opzioni"

@@ -45,6 +45,23 @@ public sealed class ExtractOrchestrator
     private const uint ZBufferWriteBit = 0x1; // value 1, bit 0
     private const uint NoFadeBit = 0x8; // value 8, bit 3 - disables distance-based dithered fading
 
+    // Diffuse texture file names HideDecalShapes hides shapes for - the generic small-rock detail
+    // overlay Bethesda scatters across mountain/rock/tundra meshes (both plain and snow-region
+    // variants), matched by file name only (case-insensitive) regardless of folder.
+    private static readonly string[] DecalTextureFileNames = { "rocks01.dds", "snowrocks01.dds" };
+
+    // Folders HideDecalShapes is scoped to - the same three asset categories the reference mod
+    // (nexusmods.com/skyrimspecialedition/mods/131170) ships its own fixed meshes under. DirtCliffs
+    // meshes are deliberately NOT included: their own "Skirt" shape must be kept (it's what
+    // GenerateDirtCliffsSnowVariant/RetextureDirtCliffsSkirt retextures for snow), and DirtCliffs
+    // shapes never use the Rocks01/SnowRocks01 textures this feature targets anyway.
+    private static readonly string[] HideDecalShapesFolderPatterns =
+        { @"*\landscape\mountains\*", @"*\landscape\rocks\*", @"*\landscape\tundra\*" };
+
+    // NiAVObject.flags bit - hides the node/shape from rendering without removing it from the file,
+    // so block indices (and therefore any plugin-side AltTexture index) never shift.
+    private const uint HiddenBit = 0x1;
+
 
     private readonly ExtractSettings _settings;
     private readonly string _dataFolder;
@@ -69,6 +86,7 @@ public sealed class ExtractOrchestrator
     private int _collisionMaterialsRemapped;
     private int _dirtCliffsSkirtShapesRetextured;
     private int _mountainSlabMaskSwapped;
+    private int _decalShapesHidden;
     private int _nonSnowLandscapeMeshesIncluded;
     private int _landscapesPatched;
 
@@ -89,17 +107,51 @@ public sealed class ExtractOrchestrator
             throw new DirectoryNotFoundException($"Data folder not found: {_dataFolder}");
         }
 
+        // Refuse to run if Output Location is - or contains - the real game Data folder. Reported
+        // directly (Nexus): a user pointed Output Location at their game's own Data folder (with no
+        // dedicated output folder set up), and the wipe step below deleted their entire real
+        // meshes\ folder - every mod's own meshes (skeletons, animation replacers, ...) gone. Checked
+        // via full-path comparison (case-insensitive, trailing separators trimmed) so this catches
+        // the exact-match case; the broader "does this even look like our own prior output" check
+        // right below catches every other unrelated folder Output Location could point at.
+        var normalizedOutput = Path.GetFullPath(_outputFolder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedDataFolder = Path.GetFullPath(_dataFolder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (string.Equals(normalizedOutput, normalizedDataFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Output Location is set to your game's own Data folder ('{_outputFolder}') - Snow Fixer "
+                + "wipes and regenerates everything under Output Location on every run, which would delete "
+                + "your entire real Data folder. Point Output Location at an empty, dedicated folder instead "
+                + "(e.g. your mod manager's own \"Snow Fixer Output\" mod folder).");
+        }
+
         // Wipe any previous run's own meshes/plugin before regenerating - this folder is entirely
         // owned by this tool (never hand-edited), so a stale leftover from an earlier run (e.g. a
         // record type that used to be scanned but no longer is) would otherwise sit on disk
         // forever, unreferenced by the fresh ESP but still shipped to players as dead weight.
         var outputMeshesParent = Path.Combine(_outputFolder, "meshes");
+        var previousEspPath = Path.Combine(_outputFolder, "SnowFixer.esp");
+        var previousLogPath = Path.Combine(_outputFolder, "SnowFixer-log.txt");
+
         if (Directory.Exists(outputMeshesParent))
         {
+            // "Entirely owned by this tool" only holds if a previous run's own marker is actually
+            // there - otherwise Output Location was pointed at some other folder that just happens
+            // to already have a meshes\ subfolder (any existing mod, or - the exact real report
+            // above - the game's own Data folder), and blindly deleting it would destroy content
+            // this tool never created. Refuse instead of guessing.
+            if (!File.Exists(previousEspPath) && !File.Exists(previousLogPath))
+            {
+                throw new InvalidOperationException(
+                    $"Output Location ('{_outputFolder}') already has a 'meshes' folder, but no "
+                    + "SnowFixer.esp or SnowFixer-log.txt from a previous run - this doesn't look like "
+                    + "Snow Fixer's own output, so refusing to delete it. Point Output Location at an "
+                    + "empty, dedicated folder instead.");
+            }
+
             Directory.Delete(outputMeshesParent, recursive: true);
         }
 
-        var previousEspPath = Path.Combine(_outputFolder, "SnowFixer.esp");
         if (File.Exists(previousEspPath))
         {
             File.Delete(previousEspPath);
@@ -262,6 +314,7 @@ public sealed class ExtractOrchestrator
             _collisionMaterialsRemapped,
             _dirtCliffsSkirtShapesRetextured,
             _mountainSlabMaskSwapped,
+            _decalShapesHidden,
             _nonSnowLandscapeMeshesIncluded,
             _landscapesPatched,
             dirtCliffsSnowVariantGenerated,
@@ -292,6 +345,7 @@ public sealed class ExtractOrchestrator
             $"Meshes with collision materials remapped to snow: {result.CollisionMaterialsRemapped}",
             $"DirtCliffs 'Skirt' shapes retextured to the snow variant: {result.DirtCliffsSkirtShapesRetextured}",
             $"MountainSlab shapes swapped to their Mask variant: {result.MountainSlabMaskSwapped}",
+            $"Decal-flagged shapes hidden: {result.DecalShapesHidden}",
             $"Non-snow landscape meshes also included for vertex color/collision fixups: {result.NonSnowLandscapeMeshesIncluded}",
             $"Landscape records with vertex colors cleared: {result.LandscapesPatched}",
             $"DirtCliffsRoots snow variant texture generated: {result.DirtCliffsSnowVariantGenerated}",
@@ -565,6 +619,94 @@ public sealed class ExtractOrchestrator
         }
 
         return patched;
+    }
+
+    private static bool IsHideDecalShapesEligibleFolder(string modelPath) =>
+        WildcardMatcher.MatchesAny(modelPath, HideDecalShapesFolderPatterns);
+
+    // Modeled on "Enhanced Rocks and Mountains - Blending Patch And Other Fixes"
+    // (nexusmods.com/skyrimspecialedition/mods/131170), whose author moved away from these same
+    // shapes because Skyrim's own dynamic snow shaders (Simplicity of Snow, BDS3, ...) render via the
+    // decal pipeline and z-fight against them. That mod's own fix edits the plugin's Alternate
+    // Textures to drop/repoint the shape - this instead just hides it in the mesh itself (NiAVObject
+    // Hidden flag, not deleted), so block indices never move and nothing in the plugin needs to
+    // change at all.
+    //
+    // Detection is purely by diffuse texture file name (DecalTextureFileNames), not by any shader
+    // flag - confirmed empirically against real vanilla meshes that the NIF's own SLSF1_Decal/
+    // Dynamic_Decal bits do NOT reliably mark these shapes (e.g. vanilla RockCliff08 has two shapes
+    // both textured "Rocks01.dds", an opaque base pass and a decal-flagged pass on top of it - only
+    // the second carries the flag, yet both need hiding; vanilla RockCliff01 has only the flagged
+    // one and no Rocks01 twin). Every shape using one of these textures is hidden, flag or no flag.
+    private bool HideDecalShapes(string duplicatedRelativePath, string label)
+    {
+        var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
+
+        using var nifFile = new NifFile();
+        if (nifFile.Load(fullPath) != 0)
+        {
+            _diagnostics.Add($"'{label}': failed to reload duplicated mesh for decal shape hiding.");
+            return false;
+        }
+
+        var header = nifFile.GetHeader();
+        var patched = false;
+
+        foreach (var shape in nifFile.GetShapes())
+        {
+            if (!TryGetLightingShaderProperty(header, shape, out var shaderProperty)
+                || !TryGetDiffuseTexture(header, shaderProperty!, out var diffuse)
+                || Array.IndexOf(DecalTextureFileNames, Path.GetFileName(diffuse).ToLowerInvariant()) < 0)
+            {
+                continue;
+            }
+
+            if ((shape.flags & HiddenBit) == 0)
+            {
+                shape.flags |= HiddenBit;
+                patched = true;
+            }
+        }
+
+        if (patched)
+        {
+            var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
+            if (nifFile.Save(fullPath, saveOptions) != 0)
+            {
+                _diagnostics.Add($"'{label}': failed to save the mesh after hiding decal shapes.");
+                return false;
+            }
+
+            _decalShapesHidden++;
+        }
+
+        return patched;
+    }
+
+    private static bool TryGetLightingShaderProperty(NiHeader header, NiShape shape, out BSLightingShaderProperty? shaderProperty)
+    {
+        shaderProperty = shape.HasShaderProperty()
+            ? header.GetBlockById(shape.ShaderPropertyRef().index) as BSLightingShaderProperty
+            : null;
+        return shaderProperty is not null;
+    }
+
+    private static bool TryGetDiffuseTexture(NiHeader header, BSLightingShaderProperty shaderProperty, out string diffuse)
+    {
+        diffuse = string.Empty;
+        if (header.GetBlockById(shaderProperty.TextureSetRef().index) is not BSShaderTextureSet textureSet)
+        {
+            return false;
+        }
+
+        var items = textureSet.textures.items();
+        if (items.Count == 0)
+        {
+            return false;
+        }
+
+        diffuse = items[0].get();
+        return !string.IsNullOrEmpty(diffuse);
     }
 
     // Neutralizes any pre-existing vertex-color painting on the duplicated mesh's shapes: forces
@@ -1037,6 +1179,10 @@ public sealed class ExtractOrchestrator
                 && (editorId.EndsWith("Snow", StringComparison.OrdinalIgnoreCase) || editorId.EndsWith("SN", StringComparison.OrdinalIgnoreCase)))
             {
                 SwapMountainSlabToMaskVariant(duplicatedPath, editorId);
+            }
+            if (_settings.HideDecalShapes && IsHideDecalShapesEligibleFolder(modelPath))
+            {
+                HideDecalShapes(duplicatedPath, editorId ?? modelPath);
             }
 
             _matched++;

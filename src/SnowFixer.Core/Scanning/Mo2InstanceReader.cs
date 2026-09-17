@@ -1,5 +1,6 @@
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Archives;
+using Mutagen.Bethesda.Archives.Exceptions;
 
 namespace SnowFixer.Core.Scanning;
 
@@ -40,6 +41,11 @@ public sealed class Mo2InstanceReader : IDisposable
     private readonly GameRelease _gameRelease;
     private IReadOnlyList<IArchiveReader>? _modArchiveReaders;
     private readonly Dictionary<IArchiveReader, Dictionary<string, IArchiveFile>> _archiveIndexes = new();
+
+    // Needed only for ManualArchiveExtractor's own workaround (see TryResolveLooseOrArchived) - it
+    // has to reopen the physical archive file itself, and IArchiveReader has no public property
+    // exposing that back.
+    private readonly Dictionary<IArchiveReader, string> _readerArchivePaths = new();
 
     public Mo2InstanceReader(string instancePath, string profileName, GameRelease gameRelease)
     {
@@ -215,8 +221,17 @@ public sealed class Mo2InstanceReader : IDisposable
             var index = GetOrBuildArchiveIndex(reader);
             if (index.TryGetValue(relativeDataPath, out var archiveFile))
             {
-                stream = archiveFile.AsStream();
-                return true;
+                try
+                {
+                    stream = archiveFile.AsStream();
+                    return true;
+                }
+                catch (ArchiveException) when (_readerArchivePaths.TryGetValue(reader, out var archivePath)
+                    && ManualArchiveExtractor.TryExtract(archivePath, archiveFile, out var bytes))
+                {
+                    stream = new MemoryStream(bytes!);
+                    return true;
+                }
             }
         }
 
@@ -270,7 +285,9 @@ public sealed class Mo2InstanceReader : IDisposable
             {
                 try
                 {
-                    readers.Add(Archive.CreateReader(_gameRelease, archivePath));
+                    var reader = Archive.CreateReader(_gameRelease, archivePath);
+                    readers.Add(reader);
+                    _readerArchivePaths[reader] = archivePath;
                 }
                 catch
                 {

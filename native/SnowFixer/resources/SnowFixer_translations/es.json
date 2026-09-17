@@ -76,6 +76,11 @@
       "checkbox": "Sustituir MountainSlab01/02 por su variante Mask en mallas con nombre de nieve",
       "help": "Para un registro cuyo EditorID termina en «Snow»/«SN», redirige cualquier forma que use MountainSlab01/02 hacia su variante «...Mask», si existe en el disco."
     },
+    "hideDecalShapes": {
+      "label": "Ocultar formas Decal",
+      "checkbox": "Ocultar formas Rocks01/SnowRocks01 en mallas de montaña/roca/tundra",
+      "help": "Evita el z-fighting con los shaders de nieve dinámica propios de Skyrim, basados en el renderizado de decals, ocultando cualquier forma texturizada con «Rocks01»/«SnowRocks01», solo en mallas de montaña/roca/tundra. Oculta la forma en lugar de eliminarla, por lo que no hace falta modificar el plugin. No afecta a las mallas DirtCliffs."
+    },
     "tab": {
       "general": "General",
       "options": "Opciones"

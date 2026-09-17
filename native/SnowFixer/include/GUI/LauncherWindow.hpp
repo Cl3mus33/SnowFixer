@@ -14,8 +14,8 @@
  * @brief The main settings dialog - General tab (Game Location, Output Location, Mod Manager/MO2
  * Instance Path/Profile, Landscape Vertex Color mode, Mesh Vertex Color mode, Mesh Blacklist, EditorID
  * Blacklist Keywords) and Options tab (Language, Theme). Trimmed down from AutoBlend's own
- * LauncherWindow: no auto-generate allowlist, no PBR checkbox, no Config Profile load/save - none of
- * that exists in SnowFixer.Core.Configuration.ExtractSettings.
+ * LauncherWindow: no auto-generate allowlist, no PBR checkbox - neither exists in
+ * SnowFixer.Core.Configuration.ExtractSettings.
  */
 class LauncherWindow : public wxDialog {
 public:
@@ -55,6 +55,7 @@ private:
     wxStaticText* m_mountainSlabMaskLabel = nullptr;
     wxCheckBox* m_swapMountainSlabMaskCheckbox = nullptr;
     wxStaticText* m_mountainSlabMaskHelpText = nullptr;
+    wxCheckBox* m_hideDecalShapesCheckbox = nullptr;
     wxButton* m_okButton = nullptr;
 
     void onLanguageChanged(wxCommandEvent&);

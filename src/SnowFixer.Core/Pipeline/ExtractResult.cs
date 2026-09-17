@@ -12,6 +12,7 @@ public sealed record ExtractResult(
     int CollisionMaterialsRemapped,
     int DirtCliffsSkirtShapesRetextured,
     int MountainSlabMaskSwapped,
+    int DecalShapesHidden,
     int NonSnowLandscapeMeshesIncluded,
     int LandscapesPatched,
     bool DirtCliffsSnowVariantGenerated,
