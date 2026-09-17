@@ -5,6 +5,15 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+- **Fixed the launcher window being taller than the screen on smaller displays** - reported
+  directly on Nexus: with every setting added since the "General" tab was first laid out (Config
+  Profile, Game Type, MountainSlab Mask, DirtCliffsRoots Snow Variant, Hide Decal Shapes, ...), the
+  dialog auto-sized itself to fit all of it, and on a smaller display that meant a window taller
+  than the screen itself - with no way to reach the controls (or even the Start button) below the
+  fold, since dragging the window's own edges can't make it bigger than the screen. The General tab
+  now scrolls its own content instead of growing the whole dialog to fit it.
+
 ## [1.0.8] - 2026-09-17
 
 ### Fixed

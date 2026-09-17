@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 
 #include <wx/notebook.h>
+#include <wx/scrolwin.h>
 #include <wx/statline.h>
 
 using namespace std;
@@ -38,7 +39,7 @@ auto makeSectionLabel(wxWindow* parent, const wxString& text) -> wxStaticText*
 }
 
 LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exePath)
-    : wxDialog(nullptr, wxID_ANY, "Snow Fixer", wxDefaultPosition, wxSize(760, 620), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
+    : wxDialog(nullptr, wxID_ANY, "Snow Fixer", wxDefaultPosition, wxSize(760, 680), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
     , m_exePath(std::move(exePath))
 {
     const wxIcon appIcon(wxICON(IDI_ICON1));
@@ -66,8 +67,17 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     auto* notebook = new wxNotebook(this, wxID_ANY);
 
     // "General" tab - the actual per-run settings, same split AutoBlend uses between per-run
-    // settings and app-wide preferences.
-    auto* generalPanel = new wxPanel(notebook);
+    // settings and app-wide preferences. A plain wxPanel here used to mean the dialog itself grew
+    // to fit however tall this tab's content got (SetSizerAndFit below) - fine while there were only
+    // a handful of settings, but every feature added since (Config Profile, Game Type, MountainSlab
+    // Mask, DirtCliffsRoots Snow Variant, Hide Decal Shapes, ...) made it taller, and reported
+    // directly on Nexus: on a smaller display the resulting window is taller than the screen itself,
+    // with no way to reach the controls (or even the Start button) below the fold - dragging the
+    // window's own edges can't make it bigger than the screen. A wxScrolledWindow instead scrolls
+    // its own content vertically, so the dialog itself can stay a fixed, always-on-screen size no
+    // matter how many settings this tab ends up with.
+    auto* generalPanel = new wxScrolledWindow(notebook);
+    generalPanel->SetScrollRate(0, 20);
     auto* generalSizer = new wxBoxSizer(wxVERTICAL);
 
     auto* introText = new wxStaticText(generalPanel, wxID_ANY,
@@ -433,6 +443,13 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     generalSizer->Add(blacklistRowSizer, 1, wxEXPAND | wxBOTTOM, BORDER_SIZE);
 
     generalPanel->SetSizer(generalSizer);
+    generalPanel->FitInside();
+    // Without this, the sizer below still asks generalPanel for its own "best size" to size the
+    // dialog around - which for a freshly-scrolled window defaults to its full (unscrolled) virtual
+    // size, defeating the scrolling just added above. Capping it means the dialog's own initial
+    // size (set in this constructor's own wxDialog(...) call) is what actually determines how much
+    // of the tab is visible before scrolling kicks in, regardless of how tall the content gets.
+    generalPanel->SetMinSize(wxSize(-1, 200));
     notebook->AddPage(generalPanel, SFTr("launcher.tab.general", "General"));
 
     // "Options" tab - app-wide preferences (language, theme) rather than per-run settings, same
@@ -513,7 +530,13 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     buttonSizer->Add(m_okButton, 0, wxALL, BORDER_SIZE);
     mainSizer->Add(buttonSizer, 0, wxEXPAND);
 
-    SetSizerAndFit(mainSizer);
+    // Deliberately SetSizer, not SetSizerAndFit: Fit() would resize the dialog to the sizer's own
+    // computed minimum size, which - even with generalPanel's min size capped above - can still
+    // grow well past this constructor's own carefully-chosen initial wxSize(760, 620) as more
+    // settings get added over time. Keeping the dialog at its authored initial size and letting
+    // generalPanel's own scrollbar absorb whatever doesn't fit is what actually keeps this working
+    // on smaller screens instead of merely delaying the same problem.
+    SetSizer(mainSizer);
     updateListColumnWidths();
 }
 
