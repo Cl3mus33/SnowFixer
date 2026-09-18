@@ -51,6 +51,11 @@ public sealed class ExtractOrchestrator
     // variants), matched by file name only (case-insensitive) regardless of folder.
     private static readonly string[] DecalTextureFileNames = { "rocks01.dds", "snowrocks01.dds" };
 
+    // Retexture target for HideDecalShapes' own non-alpha "companion" shapes (see that method) -
+    // matches the exact fix Vanaheimr's own "_snow" mesh variants use for the identical shape.
+    private const string SnowRetextureDiffuse = @"textures\landscape\snow01.dds";
+    private const string SnowRetextureNormal = @"textures\landscape\snow01_n.dds";
+
     // Folders HideDecalShapes is scoped to - the same three asset categories the reference mod
     // (nexusmods.com/skyrimspecialedition/mods/131170) ships its own fixed meshes under. DirtCliffs
     // meshes are deliberately NOT included: their own "Skirt" shape must be kept (it's what
@@ -88,6 +93,7 @@ public sealed class ExtractOrchestrator
     private int _dirtCliffsSkirtShapesRetextured;
     private int _mountainSlabMaskSwapped;
     private int _decalShapesHidden;
+    private int _decalCompanionShapesRetextured;
     private int _nonSnowLandscapeMeshesIncluded;
     private int _landscapesPatched;
 
@@ -360,6 +366,7 @@ public sealed class ExtractOrchestrator
             _dirtCliffsSkirtShapesRetextured,
             _mountainSlabMaskSwapped,
             _decalShapesHidden,
+            _decalCompanionShapesRetextured,
             _nonSnowLandscapeMeshesIncluded,
             _landscapesPatched,
             dirtCliffsSnowVariantGenerated,
@@ -390,7 +397,8 @@ public sealed class ExtractOrchestrator
             $"Meshes with collision materials remapped to snow: {result.CollisionMaterialsRemapped}",
             $"DirtCliffs 'Skirt' shapes retextured to the snow variant: {result.DirtCliffsSkirtShapesRetextured}",
             $"MountainSlab shapes swapped to their Mask variant: {result.MountainSlabMaskSwapped}",
-            $"Decal-flagged shapes hidden: {result.DecalShapesHidden}",
+            $"Decal shapes hidden: {result.DecalShapesHidden}",
+            $"Decal companion shapes retextured to snow: {result.DecalCompanionShapesRetextured}",
             $"Non-snow landscape meshes also included for vertex color/collision fixups: {result.NonSnowLandscapeMeshesIncluded}",
             $"Landscape records with vertex colors cleared: {result.LandscapesPatched}",
             $"DirtCliffsRoots snow variant texture generated: {result.DirtCliffsSnowVariantGenerated}",
@@ -670,19 +678,24 @@ public sealed class ExtractOrchestrator
         WildcardMatcher.MatchesAny(modelPath, HideDecalShapesFolderPatterns);
 
     // Modeled on "Enhanced Rocks and Mountains - Blending Patch And Other Fixes"
-    // (nexusmods.com/skyrimspecialedition/mods/131170), whose author moved away from these same
-    // shapes because Skyrim's own dynamic snow shaders (Simplicity of Snow, BDS3, ...) render via the
-    // decal pipeline and z-fight against them. That mod's own fix edits the plugin's Alternate
-    // Textures to drop/repoint the shape - this instead just hides it in the mesh itself (NiAVObject
-    // Hidden flag, not deleted), so block indices never move and nothing in the plugin needs to
-    // change at all.
+    // (nexusmods.com/skyrimspecialedition/mods/131170), whose own "_snow" mesh variants (e.g.
+    // rockcliff08_snow.nif) do exactly this pairing directly - confirmed via nifly against the real
+    // file: the actual decal shape (alpha-blended "Rocks01"/"SnowRocks01") is gone entirely, and its
+    // non-alpha companion (same texture, no NiAlphaProperty - e.g. vanilla RockCliff08's own ":9")
+    // is RETEXTURED to "landscape\snow01", not removed. Deleting the decal block outright needs more
+    // block-graph surgery than hiding it does for the same visual result, so this hides it instead
+    // (NiAVObject Hidden flag - block indices, and any plugin-side AltTexture index, never move).
     //
-    // Detection is purely by diffuse texture file name (DecalTextureFileNames), not by any shader
-    // flag - confirmed empirically against real vanilla meshes that the NIF's own SLSF1_Decal/
-    // Dynamic_Decal bits do NOT reliably mark these shapes (e.g. vanilla RockCliff08 has two shapes
-    // both textured "Rocks01.dds", an opaque base pass and a decal-flagged pass on top of it - only
-    // the second carries the flag, yet both need hiding; vanilla RockCliff01 has only the flagged
-    // one and no Rocks01 twin). Every shape using one of these textures is hidden, flag or no flag.
+    // Detection is by diffuse texture name (DecalTextureFileNames); which of the two treatments a
+    // matching shape gets is decided by HasAlphaProperty(), not the NIF's own SLSF1_Decal shader
+    // flag - texture name plus the decal flag alone is NOT safe: reported directly on Nexus
+    // (visible holes) after shipping that way. Vanilla RockCliff08's own ":9" shares "Rocks01.dds"
+    // with the real decal shape ":8" but was never decal-flagged, and turned out to be real, load-
+    // bearing surface geometry once simply hidden alongside ":8" - hiding it left a gaping hole,
+    // exactly the failure mode Vanaheimr's own fix avoids by retexturing it instead. HasAlphaProperty
+    // reliably tells the two apart (true for the actual decal shape, false for its companion) -
+    // confirmed against both RockCliff01 (no companion at all - only its own decal has alpha) and
+    // RockCliff08 (companion present, no alpha) in the real vanilla meshes.
     private bool HideDecalShapes(string duplicatedRelativePath, string label)
     {
         var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
@@ -695,7 +708,8 @@ public sealed class ExtractOrchestrator
         }
 
         var header = nifFile.GetHeader();
-        var patched = false;
+        var hidAny = false;
+        var retexturedAny = false;
 
         foreach (var shape in nifFile.GetShapes())
         {
@@ -706,15 +720,28 @@ public sealed class ExtractOrchestrator
                 continue;
             }
 
-            if ((shape.flags & HiddenBit) == 0)
+            if (shape.HasAlphaProperty())
             {
-                shape.flags |= HiddenBit;
-                patched = true;
+                if ((shape.flags & HiddenBit) == 0)
+                {
+                    shape.flags |= HiddenBit;
+                    hidAny = true;
+                }
+            }
+            else if (RetextureCompanionToSnow(nifFile, shape, shaderProperty!))
+            {
+                retexturedAny = true;
             }
         }
 
+        var patched = hidAny || retexturedAny;
         if (patched)
         {
+            // Same cleanup as RetextureDirtCliffsSkirt/SwapMountainSlabToMaskVariant - cloning a
+            // shared texture set per matching shape leaves each original block behind once nothing
+            // references it anymore.
+            header.DeleteBlockByType("BSShaderTextureSet", true);
+
             var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
             if (nifFile.Save(fullPath, saveOptions) != 0)
             {
@@ -722,7 +749,15 @@ public sealed class ExtractOrchestrator
                 return false;
             }
 
-            _decalShapesHidden++;
+            if (hidAny)
+            {
+                _decalShapesHidden++;
+            }
+
+            if (retexturedAny)
+            {
+                _decalCompanionShapesRetextured++;
+            }
         }
 
         return patched;
@@ -752,6 +787,44 @@ public sealed class ExtractOrchestrator
 
         diffuse = items[0].get();
         return !string.IsNullOrEmpty(diffuse);
+    }
+
+    // Retextures a HideDecalShapes "companion" shape (matches Rocks01/SnowRocks01 but has no
+    // NiAlphaProperty, so it's real geometry rather than the decal itself - see HideDecalShapes'
+    // own comment) to the vanilla snow ground texture, exactly as Vanaheimr's own "_snow" mesh
+    // variants do for the identical shape. Same private-texture-set-clone pattern as
+    // SwapMountainSlabToMaskVariant, since the texture set may be shared with sibling shapes.
+    private static bool RetextureCompanionToSnow(NifFile nifFile, NiShape shape, BSLightingShaderProperty shaderProperty)
+    {
+        if (nifFile.GetHeader().GetBlockById(shaderProperty.TextureSetRef().index) is not BSShaderTextureSet textureSet)
+        {
+            return false;
+        }
+
+        var items = textureSet.textures.items();
+        if (items.Count == 0)
+        {
+            return false;
+        }
+
+        var privateItems = new vectorNiString();
+        foreach (var item in items)
+        {
+            privateItems.Add(new NiString(item.get()));
+        }
+
+        var privateTextureSet = new BSShaderTextureSet();
+        var privateVector = new NiStringVector();
+        privateVector.SetItems(privateItems);
+        privateTextureSet.textures = privateVector;
+
+        var privateTextureSetIndex = nifFile.GetHeader().AddBlock(privateTextureSet);
+        GC.SuppressFinalize(privateTextureSet);
+        shaderProperty.SetTextureSetRef(privateTextureSetIndex);
+
+        nifFile.SetTextureSlot(shape, SnowRetextureDiffuse, 0);
+        nifFile.SetTextureSlot(shape, SnowRetextureNormal, 1);
+        return true;
     }
 
     // Neutralizes any pre-existing vertex-color painting on the duplicated mesh's shapes: forces

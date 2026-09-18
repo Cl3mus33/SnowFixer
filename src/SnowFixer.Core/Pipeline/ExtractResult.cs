@@ -13,6 +13,7 @@ public sealed record ExtractResult(
     int DirtCliffsSkirtShapesRetextured,
     int MountainSlabMaskSwapped,
     int DecalShapesHidden,
+    int DecalCompanionShapesRetextured,
     int NonSnowLandscapeMeshesIncluded,
     int LandscapesPatched,
     bool DirtCliffsSnowVariantGenerated,

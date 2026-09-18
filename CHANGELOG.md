@@ -5,6 +5,20 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.0.10] - 2026-09-18
+
+### Fixed
+- **Fixed Hide Decal Shapes creating holes in generated meshes** - reported directly on Nexus with a
+  NifSkope screenshot: a shape sharing the Rocks01/SnowRocks01 texture with a real decal shape isn't
+  always a redundant duplicate - on meshes like vanilla RockCliff08, the second shape (":9") is real,
+  load-bearing surface geometry, and hiding it alongside the actual decal (":8") left a visible gap.
+  Confirmed by inspecting the reference mod's (Vanaheimr, ra2phoenix) own fixed mesh: it keeps that
+  shape but retextures it to `landscape\snow01`, rather than hiding it. Detection is now split by
+  `NiAlphaProperty`, which reliably tells the two apart - the actual decal shape (has the property) is
+  still hidden exactly as before, while its non-alpha companion is retextured to the vanilla snow
+  ground texture instead of touched at all. Verified directly against both vanilla RockCliff01 (no
+  companion shape) and RockCliff08 (companion present) - only the real decal shape is ever hidden now.
+
 ## [1.0.9] - 2026-09-17
 
 ### Fixed
