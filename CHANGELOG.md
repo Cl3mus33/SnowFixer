@@ -8,8 +8,8 @@ All notable changes to this project are documented here. Format loosely follows
 ## [1.0.10] - 2026-09-18
 
 ### Fixed
-- **Fixed Hide Decal Shapes creating holes in generated meshes** - reported directly on Nexus with a
-  NifSkope screenshot: a shape sharing the Rocks01/SnowRocks01 texture with a real decal shape isn't
+- **Fixed Hide Decal Shapes creating holes in generated meshes** - found via own testing (NifSkope):
+  a shape sharing the Rocks01/SnowRocks01 texture with a real decal shape isn't
   always a redundant duplicate - on meshes like vanilla RockCliff08, the second shape (":9") is real,
   load-bearing surface geometry, and hiding it alongside the actual decal (":8") left a visible gap.
   Confirmed by inspecting the reference mod's (Vanaheimr, ra2phoenix) own fixed mesh: it keeps that
