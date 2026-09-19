@@ -1,35 +1,56 @@
 # Snow Fixer
 
-A standalone tool for Skyrim Special Edition that scans your load order for every snow-related mesh
-and record, duplicates and patches the winning ones, and writes a single plugin pointing at the
-fixes — without ever touching an original asset.
+*Make the snow in your Skyrim look the way it was meant to.*
+
+Rocks with weird dark tinting in the snow? Footsteps that sound like dirt on a snowy path?
+Glaciers wearing a second coat of snow? Snow Fixer goes through your load order, finds every
+snow-related mesh and record, and fixes them in a single plugin. Your original files are never
+touched, and you can remove the plugin any time.
+
+Works with **Skyrim Special Edition and Legendary Edition**, with Mod Organizer 2, Vortex or a plain
+Data folder.
 
 ## What it does
 
-Point Snow Fixer at your load order (via Mod Organizer 2, or a plain Data folder) and it will:
-
-- Scan every base record with a NIF model whose EditorID or mesh path mentions snow, and duplicate
-  each winning mesh right alongside the original.
-- **Vertex colors** — clear baked-in vertex color tinting on terrain (LAND) records and on
+- **Finds the snow** — scans every record whose EditorID or mesh path mentions snow and makes a
+  patched copy of the winning mesh, right next to the original.
+- **Cleans up the tinting** — removes baked-in vertex color tinting on terrain (LAND) records and on
   landscape-folder meshes (rocks, cliffs, icebergs, ...), either only where a snow-classified
   texture is involved or across the board.
-- **Shader flags** — fix ZBuffer-write / no-fade flags on the generated meshes so they render
-  correctly at a distance.
-- **Collision materials** — remap collision materials on the generated snow meshes toward their
-  snow equivalent (currently Dirt/Grass → Snow), so footstep sounds match the snowy visual.
-- **DirtCliffsRoots snow variant** — generate a snow-covered version of the dirt cliff roots
-  texture from the alpha channel of the roots texture and the diffuse/normal/etc. of the game's
-  own snow texture, aware of the Vanilla / Complex Material / True PBR conventions (correct
-  compression format + a matching PBRNifPatcher json when needed), and apply it to exactly the
-  right part ("Skirt") of the generated DirtCliffs meshes.
-- **MountainSlab Mask Swap** — for a record whose EditorID ends in "Snow"/"SN", repoint any shape
-  using the MountainSlab01/02 texture to its "...Mask" sibling when a texture pack ships one, so
-  rock/mountain meshes read correctly under a snow overlay.
-- **Mesh blacklist / EditorID keyword blacklist** — exclude specific meshes (wildcards supported)
-  or any record whose EditorID contains a given keyword, to rule out false-positive matches.
-- **Error handling** — malformed asset paths are reported and skipped per record where possible;
-  fatal run errors include detailed exception information in the progress window.
-- Run fully offline against your files — it never touches the running game.
+- **Fixes distant snow** — corrects ZBuffer-write / no-fade shader flags on the generated meshes so
+  they render correctly at a distance.
+- **Makes footsteps match** — remaps Dirt/Grass collision materials on the generated snow meshes to
+  Snow, per collision chunk, so unrelated materials in the same mesh are left alone.
+- **Snowy dirt cliff roots** — generates a snow-covered DirtCliffsRoots texture from the roots
+  texture's alpha and the game's own snow texture (Vanilla / Complex Material / True PBR aware, with
+  a matching PBRNifPatcher json when needed) and applies it to exactly the right part ("Skirt") of
+  the generated DirtCliffs meshes.
+
+### Optional extras (off by default)
+
+- **Hide Decal Shapes** — stops decal-based dynamic snow shaders (Simplicity of Snow, BDS3, ...)
+  from z-fighting with small rock overlays on mountain/rock/tundra meshes. The true decal shape
+  ("Rocks01"/"SnowRocks01" with an alpha property) is hidden rather than deleted, and its non-alpha
+  companion shape is retextured to the vanilla snow texture, so no hole is left behind. No plugin
+  changes are needed.
+- **Ice Snow Material** — clears the `SnowMaterialGlacier` / `SnowMaterialGlacierSlab` Material
+  Object link on every static that uses it, so no projected snow covers glaciers and ice. Only
+  `SnowFixer.esp` changes; the ice's own shader material is left alone.
+- **MountainSlab Mask Swap** — for a record whose EditorID ends in "Snow"/"SN", uses the
+  "...Mask" version of MountainSlab01/02 when a texture pack ships one.
+
+Also included: mesh and EditorID keyword blacklists (wildcards supported, with sensible defaults for
+new installs) and config profiles to save/load the whole launcher setup as a JSON file — handy if
+several modlists share one install.
+
+### Made to be safe
+
+- Only **active** plugins are scanned, so a disabled mod never ends up as a master of the output.
+- Output Location can't be the game's own Data folder, and an existing output folder is only wiped
+  when it's provably Snow Fixer's own previous output.
+- Malformed asset paths are reported and skipped per record; paths with non-ASCII characters
+  (e.g. Cyrillic) are supported.
+- Runs fully offline against your files — it never touches the running game.
 
 ## Two native tools, one patch engine
 
@@ -46,12 +67,17 @@ The actual scanning/patching logic lives in **`src/SnowFixer.Core`** (C#, built 
 
 ## Installation
 
-1. Download the latest release and install it like any other mod (MO2: as a regular mod).
-2. Point it at your game install, your mod manager (if any), and an output folder. When using MO2,
-   choose the instance and the profile whose `modlist.txt`/`plugins.txt` should be scanned.
-3. Run it, then enable the generated output plugin in your mod manager.
+1. Install it like any other mod (MO2: as a regular mod; Vortex: extract into a mod folder).
+2. Launch it from your mod manager's tool list.
+3. Pick your game (SE or LE), point it at your game folder (and your MO2 instance/profile if you use
+   MO2), and choose an **empty, dedicated** output folder.
+4. Hit Start, then enable the generated output plugin.
 
-Supports Skyrim Special Edition.
+Changed your load order? Just run it again — it always starts fresh from what's installed.
+
+Like other patchers (AutoSeasons, AutoBlend, PGPatcher, DynDOLOD, ...), Snow Fixer only looks at what
+exists when you run it: if you change something, regenerate everything that comes after it. Suggested
+order: Snow Fixer → AutoSeasons → AutoBlend → PGPatcher → DynDOLOD (skip the ones you don't use).
 
 ## Building from source
 
