@@ -5,6 +5,20 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-19
+
+### Fixed
+- **`SnowFixer.esp` can no longer end up with a master that isn't part of the loaded setup** - reported
+  on Nexus: with vertex colors set to "All" on landscapes, the plugin listed `NOTWL - Lanterns.esp` (a
+  True Light patch from a mod the user had disabled) as a master. Reproduced the mechanism directly:
+  each patched LAND record drags in its parent Cell/Worldspace records, copied whole with every link
+  they hold, so a link into a plugin that isn't actually loaded turned that plugin into a master. Any
+  reference to a plugin that is neither in the load order, nor in the game's Data folder (base game/CC),
+  nor shipped by an enabled MO2 mod is now cleared before writing (those links are already dead
+  in-game), and a diagnostic lists which plugins were involved. Verified against a real load order
+  with two plugins declared unavailable: they disappear from the masters, and a normal run is
+  unchanged.
+
 ## [1.2.0] - 2026-09-19
 
 ### Added

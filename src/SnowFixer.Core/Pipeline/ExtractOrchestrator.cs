@@ -82,6 +82,7 @@ public sealed class ExtractOrchestrator
 
     private IGameEnvironment<ISkyrimMod, ISkyrimModGetter> _env = null!;
     private IGameFileProbe _fileProbe = null!;
+    private Mo2InstanceReader? _mo2Reader;
     private SkyrimMod _outputMod = null!;
     private readonly HashSet<string> _usedOutputPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _diagnostics = new();
@@ -261,6 +262,7 @@ public sealed class ExtractOrchestrator
                 : envBuilder.Build();
         using var envDisposable = _env;
 
+        _mo2Reader = mo2Reader;
         _fileProbe = mo2Reader is not null
             ? new Mo2ModlistFileProbe(mo2Reader, _dataFolder, gameRelease)
             : new ArchiveAwareFileProbe(_dataFolder, gameRelease);
@@ -338,6 +340,10 @@ public sealed class ExtractOrchestrator
             dirtCliffsSnowVariantGenerated = textureGenerator.Generated;
             _diagnostics.AddRange(textureGenerator.Diagnostics);
         }
+
+        // Guarantee SnowFixer.esp never depends on a plugin that isn't actually part of the loaded
+        // setup - see RemoveLinksToUnavailableMasters.
+        RemoveLinksToUnavailableMasters(IsPluginAvailable);
 
         // Flag the output as ESL (Light) whenever it actually fits that format's own new-record
         // range, matching AutoBlend's own identical logic - opt-in rather than default is the
@@ -479,6 +485,55 @@ public sealed class ExtractOrchestrator
             _outputMod.Statics.GetOrAddAsOverride(record).Material.SetToNull();
             _iceSnowMaterialsRemoved++;
         }
+    }
+
+    // A plugin counts as available when it's in the environment's own load order, or physically
+    // present in the game's Data folder (base game/DLC/Creation Club plugins the engine loads on its
+    // own, never necessarily listed in plugins.txt), or shipped by an ENABLED MO2 mod. A plugin from
+    // a disabled mod is none of those.
+    private bool IsPluginAvailable(ModKey modKey)
+    {
+        var fileName = modKey.FileName.String;
+        return _env.LoadOrder.ContainsKey(modKey)
+            || File.Exists(Path.Combine(_dataFolder, fileName))
+            || (_mo2Reader?.TryResolve(fileName, out _) ?? false);
+    }
+
+    // Some records SnowFixer.esp carries along aren't the ones a run set out to patch - e.g. a LAND
+    // override drags in its parent Cell/Worldspace records, copied whole with every link they hold.
+    // If any such link points into a plugin that isn't part of the loaded setup (e.g. a mod the user
+    // disabled), the output would list that plugin as a master - reported directly on Nexus as a
+    // "missing master" (NOTWL - Lanterns.esp, a patch from a disabled True Light). Links to
+    // unavailable plugins are already dead in-game, so they're simply nulled here; Mutagen then
+    // drops the no-longer-referenced master when the plugin is written.
+    private void RemoveLinksToUnavailableMasters(Func<ModKey, bool> isAvailable)
+    {
+        var remap = new Dictionary<FormKey, FormKey>();
+        var unavailable = new HashSet<ModKey>();
+        foreach (var record in _outputMod.EnumerateMajorRecords())
+        {
+            foreach (var link in record.EnumerateFormLinks())
+            {
+                var formKey = link.FormKey;
+                if (formKey.IsNull || formKey.ModKey == _outputMod.ModKey || isAvailable(formKey.ModKey))
+                {
+                    continue;
+                }
+
+                remap[formKey] = FormKey.Null;
+                unavailable.Add(formKey.ModKey);
+            }
+        }
+
+        if (remap.Count == 0)
+        {
+            return;
+        }
+
+        _outputMod.RemapLinks(remap);
+        _diagnostics.Add($"Cleared {remap.Count} reference(s) to plugin(s) that aren't part of the loaded setup "
+            + $"(e.g. from a disabled mod), so SnowFixer.esp doesn't list them as masters: "
+            + string.Join(", ", unavailable.Select(m => m.FileName.String)));
     }
 
     private static readonly string[] LandscapeMeshFolderPatterns = { @"*\landscape\*" };
