@@ -81,6 +81,11 @@
       "checkbox": "Hide Rocks01/SnowRocks01 shapes on mountain/rock/tundra meshes",
       "help": "Avoids z-fighting with Skyrim's own decal-based dynamic snow shaders by hiding any shape textured with \"Rocks01\"/\"SnowRocks01\", on mountain/rock/tundra meshes only. Hides the shape instead of deleting it, so no plugin changes are needed. Does not affect DirtCliffs meshes."
     },
+    "removeIceSnowMaterial": {
+      "label": "Ice Snow Material",
+      "checkbox": "Remove the glacier snow material from statics",
+      "help": "Clears the SnowMaterialGlacier / SnowMaterialGlacierSlab Material Object from every static that uses it, so no snow is projected on glaciers and ice. Only changes SnowFixer.esp - no mesh is modified, and the ice's own shader material is left alone."
+    },
     "tab": {
       "general": "General",
       "options": "Options"

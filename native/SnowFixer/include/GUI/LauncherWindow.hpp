@@ -56,6 +56,7 @@ private:
     wxCheckBox* m_swapMountainSlabMaskCheckbox = nullptr;
     wxStaticText* m_mountainSlabMaskHelpText = nullptr;
     wxCheckBox* m_hideDecalShapesCheckbox = nullptr;
+    wxCheckBox* m_removeIceSnowMaterialCheckbox = nullptr;
     wxButton* m_okButton = nullptr;
 
     void onLanguageChanged(wxCommandEvent&);

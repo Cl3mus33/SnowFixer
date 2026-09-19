@@ -85,13 +85,15 @@ struct SFParams {
         LR"(*\trees\*)",       LR"(*\ice\*)",         LR"(*\effects\*)",
         LR"(*\weapons\*)",     LR"(*\trophy\*)",      LR"(*\snowelfruins\*)",
         LR"(*\wet\*)",         LR"(*\lod\*)",         LR"(*\clutter\*)",
-        LR"(*\architecture\*)", LR"(*\dungeons\*)",
+        LR"(*\architecture\*)", LR"(*\dungeons\*)",    LR"(*\glaciers\*)",
     };
     /// @brief Records whose EditorID contains one of these words (case-insensitive) are skipped
     /// entirely. Defaults refined through real use - see
     /// SnowFixer.Core.Configuration.ExtractSettings.EditorIdBlacklistKeywords for the reasoning;
     /// both sides must stay in lockstep.
-    std::vector<std::wstring> editorIdBlacklistKeywords { L"marker", L"glacier", L"lod" };
+    std::vector<std::wstring> editorIdBlacklistKeywords {
+        L"marker", L"glacier", L"lod", L"ice", L"frozen", L"icicle",
+    };
 
     /// @brief Generates a snow variant of Vanaheimr's own "landscape\dirtcliffs\dirtcliffsroots01"
     /// texture - one specific, hardcoded texture pair rather than a general engine. Off by default.
@@ -106,6 +108,10 @@ struct SFParams {
     /// z-fights with Skyrim's own decal-based dynamic snow shaders (Simplicity of Snow, BDS3, ...) -
     /// needs no plugin-side changes since the shape stays in the mesh. Off by default.
     bool hideDecalShapes = false;
+
+    /// @brief Clears the snow Material Object (SnowMaterialGlacier / SnowMaterialGlacierSlab) link on
+    /// every static that uses it, so no projected snow covers glaciers/ice. Off by default.
+    bool removeIceSnowMaterial = false;
 };
 
 /**

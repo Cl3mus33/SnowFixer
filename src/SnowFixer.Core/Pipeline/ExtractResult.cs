@@ -14,6 +14,7 @@ public sealed record ExtractResult(
     int MountainSlabMaskSwapped,
     int DecalShapesHidden,
     int DecalCompanionShapesRetextured,
+    int IceSnowMaterialsRemoved,
     int NonSnowLandscapeMeshesIncluded,
     int LandscapesPatched,
     bool DirtCliffsSnowVariantGenerated,

@@ -81,6 +81,11 @@
       "checkbox": "Nascondi le shape Rocks01/SnowRocks01 sulle mesh montagne/rocce/tundra",
       "help": "Evita lo z-fighting con gli shader di neve dinamica di Skyrim, anch'essi basati sul rendering decal, nascondendo qualsiasi shape con texture \"Rocks01\"/\"SnowRocks01\", solo sulle mesh montagne/rocce/tundra. Nasconde la shape invece di eliminarla, quindi non è necessaria alcuna modifica al plugin. Non riguarda le mesh DirtCliffs."
     },
+    "removeIceSnowMaterial": {
+      "label": "Materiale neve sul ghiaccio",
+      "checkbox": "Rimuovi il materiale neve dei ghiacciai dagli static",
+      "help": "Rimuove il Material Object SnowMaterialGlacier / SnowMaterialGlacierSlab da ogni static che lo usa, in modo che non venga proiettata neve su ghiacciai e ghiaccio. Modifica solo SnowFixer.esp - nessuna mesh viene modificata e il materiale shader proprio del ghiaccio resta invariato."
+    },
     "tab": {
       "general": "Generale",
       "options": "Opzioni"

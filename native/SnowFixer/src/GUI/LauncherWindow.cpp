@@ -380,6 +380,25 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     hideDecalShapesHelpText->Wrap(HELP_WRAP_PAIRED);
     dirtCliffsColumnSizer->Add(hideDecalShapesHelpText, 0, wxTOP, BORDER_SIZE);
 
+    // Ice snow material removal - clears STAT.DNAM's Material link on every static that points at
+    // SnowMaterialGlacier/SnowMaterialGlacierSlab, so no projected snow covers glaciers/ice.
+    // Plugin-only change (no mesh is touched). Off by default.
+    dirtCliffsColumnSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.removeIceSnowMaterial.label", "Ice Snow Material")), 0,
+        wxTOP, BORDER_SIZE * 2);
+
+    m_removeIceSnowMaterialCheckbox = new wxCheckBox(generalPanel, wxID_ANY,
+        SFTr("launcher.removeIceSnowMaterial.checkbox", "Remove the glacier snow material from statics"));
+    m_removeIceSnowMaterialCheckbox->SetValue(initParams.removeIceSnowMaterial);
+    dirtCliffsColumnSizer->Add(m_removeIceSnowMaterialCheckbox, 0, wxTOP, BORDER_SIZE);
+
+    auto* removeIceSnowMaterialHelpText = new wxStaticText(generalPanel, wxID_ANY,
+        SFTr("launcher.removeIceSnowMaterial.help",
+            "Clears the SnowMaterialGlacier / SnowMaterialGlacierSlab Material Object from every static "
+            "that uses it, so no snow is projected on glaciers and ice. Only changes SnowFixer.esp - no "
+            "mesh is modified, and the ice's own shader material is left alone."));
+    removeIceSnowMaterialHelpText->Wrap(HELP_WRAP_PAIRED);
+    dirtCliffsColumnSizer->Add(removeIceSnowMaterialHelpText, 0, wxTOP, BORDER_SIZE);
+
     collisionDirtCliffsRowSizer->Add(collisionColumnSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, BORDER_SIZE);
     collisionDirtCliffsRowSizer->Add(dirtCliffsColumnSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, BORDER_SIZE);
     generalSizer->Add(collisionDirtCliffsRowSizer, 0, wxEXPAND | wxBOTTOM, BORDER_SIZE);
@@ -609,6 +628,7 @@ void LauncherWindow::getParams(SFParams& outParams) const
     outParams.generateDirtCliffsSnowVariant = m_generateDirtCliffsSnowVariantCheckbox->GetValue();
     outParams.swapMountainSlabMask = m_swapMountainSlabMaskCheckbox->GetValue();
     outParams.hideDecalShapes = m_hideDecalShapesCheckbox->GetValue();
+    outParams.removeIceSnowMaterial = m_removeIceSnowMaterialCheckbox->GetValue();
 }
 
 void LauncherWindow::onLanguageChanged([[maybe_unused]] wxCommandEvent& event)
@@ -797,6 +817,7 @@ void LauncherWindow::applyLoadedParams(const SFParams& params)
     m_generateDirtCliffsSnowVariantCheckbox->SetValue(params.generateDirtCliffsSnowVariant);
     m_swapMountainSlabMaskCheckbox->SetValue(params.swapMountainSlabMask);
     m_hideDecalShapesCheckbox->SetValue(params.hideDecalShapes);
+    m_removeIceSnowMaterialCheckbox->SetValue(params.removeIceSnowMaterial);
     updateGameTypeFieldState();
 
     updateListColumnWidths();

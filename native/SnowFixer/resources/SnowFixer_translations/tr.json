@@ -81,6 +81,11 @@
       "checkbox": "Dağ/kaya/tundra mesh’lerinde Rocks01/SnowRocks01 shape’lerini gizle",
       "help": "Skyrim’in kendi decal tabanlı dinamik kar shader’larıyla z-fighting’i, dokusu \"Rocks01\"/\"SnowRocks01\" olan her shape’i gizleyerek önler - yalnızca dağ/kaya/tundra mesh’lerinde. Shape’i silmek yerine gizler, bu yüzden eklentide herhangi bir değişiklik gerekmez. DirtCliffs mesh’lerini etkilemez."
     },
+    "removeIceSnowMaterial": {
+      "label": "Buz Kar Materyali",
+      "checkbox": "Buzul kar materyalini static'lerden kaldır",
+      "help": "SnowMaterialGlacier / SnowMaterialGlacierSlab Material Object'ini kullanan tüm static'lerden kaldırır, böylece buzullara ve buza kar yansıtılmaz. Yalnızca SnowFixer.esp'yi değiştirir - hiçbir mesh değiştirilmez ve buzun kendi shader materyali korunur."
+    },
     "tab": {
       "general": "Genel",
       "options": "Seçenekler"

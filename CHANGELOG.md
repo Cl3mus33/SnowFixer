@@ -5,6 +5,23 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-19
+
+### Added
+- **Ice Snow Material** - new opt-in option that removes the projected snow from glaciers and ice.
+  For every static whose Direction Material (STAT.DNAM) points at `SnowMaterialGlacier` or
+  `SnowMaterialGlacierSlab`, the override written to `SnowFixer.esp` clears that Material link. Only
+  those two Material Objects are touched - the ice's own look (`IceShader01` and similar) is
+  deliberately left alone, and no mesh is modified. Matched by Material Object only (not by
+  mesh/EditorID keywords), so it also catches uses outside obvious ice names. Verified against real
+  load orders: it clears every unique winning static using them (27 Slab + 19 Glacier in vanilla).
+
+### Changed
+- New installs now also start with `*\glaciers\*` in the default Mesh Blacklist and `ice`, `frozen`
+  and `icicle` in the default EditorID Blacklist Keywords, so glacier/ice content is not duplicated
+  and snow-fixed. Existing `settings.json` files keep their own lists - this only changes what a
+  fresh install starts from.
+
 ## [1.0.11] - 2026-09-19
 
 ### Fixed

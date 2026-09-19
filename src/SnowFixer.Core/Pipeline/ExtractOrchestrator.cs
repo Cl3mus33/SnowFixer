@@ -69,6 +69,11 @@ public sealed class ExtractOrchestrator
     // so block indices (and therefore any plugin-side AltTexture index) never shift.
     private const uint HiddenBit = 0x1;
 
+    // The snow Material Objects (MATO EditorIDs) RemoveIceSnowMaterial strips from every static that
+    // uses them. NOT IceShader01 and friends - those carry the ice's own look, only snow projected on
+    // top of it is being removed.
+    private static readonly string[] IceSnowMaterialEditorIds = { "SnowMaterialGlacier", "SnowMaterialGlacierSlab" };
+
 
     private readonly ExtractSettings _settings;
     private readonly string _dataFolder;
@@ -95,6 +100,7 @@ public sealed class ExtractOrchestrator
     private int _mountainSlabMaskSwapped;
     private int _decalShapesHidden;
     private int _decalCompanionShapesRetextured;
+    private int _iceSnowMaterialsRemoved;
     private int _nonSnowLandscapeMeshesIncluded;
     private int _landscapesPatched;
 
@@ -312,6 +318,12 @@ public sealed class ExtractOrchestrator
             r => _outputMod.Containers.GetOrAddAsOverride(r).Model!,
             "Container", Report);
 
+        if (_settings.RemoveIceSnowMaterial)
+        {
+            Report("Removing snow material from ice statics...");
+            RemoveIceSnowMaterials();
+        }
+
         if (_settings.LandscapeVertexColorMode != LandscapeVertexColorMode.None)
         {
             PatchLandscapes(Report);
@@ -368,6 +380,7 @@ public sealed class ExtractOrchestrator
             _mountainSlabMaskSwapped,
             _decalShapesHidden,
             _decalCompanionShapesRetextured,
+            _iceSnowMaterialsRemoved,
             _nonSnowLandscapeMeshesIncluded,
             _landscapesPatched,
             dirtCliffsSnowVariantGenerated,
@@ -400,6 +413,7 @@ public sealed class ExtractOrchestrator
             $"MountainSlab shapes swapped to their Mask variant: {result.MountainSlabMaskSwapped}",
             $"Decal shapes hidden: {result.DecalShapesHidden}",
             $"Decal companion shapes retextured to snow: {result.DecalCompanionShapesRetextured}",
+            $"Ice statics with their snow Material Object removed: {result.IceSnowMaterialsRemoved}",
             $"Non-snow landscape meshes also included for vertex color/collision fixups: {result.NonSnowLandscapeMeshesIncluded}",
             $"Landscape records with vertex colors cleared: {result.LandscapesPatched}",
             $"DirtCliffsRoots snow variant texture generated: {result.DirtCliffsSnowVariantGenerated}",
@@ -442,6 +456,30 @@ public sealed class ExtractOrchestrator
     private static bool IsSnow(string? editorId, string? modelPath) =>
         (editorId is not null && (editorId.Contains("snow", StringComparison.OrdinalIgnoreCase) || EndsWithSnowSuffix(editorId)))
         || (modelPath is not null && modelPath.Contains("snow", StringComparison.OrdinalIgnoreCase));
+
+    // Clears STAT.DNAM's Material link (the projected snow/ash overlay - see the Direction Material
+    // notes on ExtractSettings.RemoveIceSnowMaterial) on every static whose winning Material points at
+    // one of IceSnowMaterialEditorIds. Matched purely by Material Object, not by mesh or EditorID
+    // keywords: an earlier keyword-restricted version (glacier/icicle/iceberg/icepile/\ice\) missed
+    // real users of these two glacier-specific Material Objects (e.g. vanilla's
+    // SERuinsWaygatePlatform01SnowLight). Deliberately ignores the mesh/EditorID blacklists: the
+    // default blacklist excludes glacier/ice content from snow duplication, which is the opposite of
+    // what this needs.
+    private void RemoveIceSnowMaterials()
+    {
+        foreach (var record in _env.LoadOrder.PriorityOrder.WinningOverrides<IStaticGetter>())
+        {
+            if (record.Material.IsNull
+                || !record.Material.TryResolve(_env.LinkCache, out var material)
+                || Array.FindIndex(IceSnowMaterialEditorIds, id => string.Equals(id, material.EditorID, StringComparison.OrdinalIgnoreCase)) < 0)
+            {
+                continue;
+            }
+
+            _outputMod.Statics.GetOrAddAsOverride(record).Material.SetToNull();
+            _iceSnowMaterialsRemoved++;
+        }
+    }
 
     private static readonly string[] LandscapeMeshFolderPatterns = { @"*\landscape\*" };
 

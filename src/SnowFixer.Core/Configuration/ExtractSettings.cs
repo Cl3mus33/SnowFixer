@@ -73,6 +73,14 @@ public sealed class ExtractSettings
     /// heavier ESP-editing route this setting avoids.</summary>
     public bool HideDecalShapes { get; set; }
 
+    /// <summary>Clears the Direction Material (STAT.DNAM "Material") link on every static that
+    /// points at one of the snow Material Objects listed in
+    /// <see cref="Pipeline.ExtractOrchestrator"/> (currently SnowMaterialGlacier and
+    /// SnowMaterialGlacierSlab), so no projected snow covers glaciers/ice. Only the link is cleared, in
+    /// SnowFixer.esp - no mesh is touched, and the ice's own shader material (e.g. IceShader01) is
+    /// deliberately left alone. Opt-in, off by default.</summary>
+    public bool RemoveIceSnowMaterial { get; set; }
+
     /// <summary>None (scan the raw Data folder directly - nothing extra to configure) or
     /// ModOrganizer2 (requires <see cref="Mo2InstancePath"/> to reconstruct its virtual file
     /// system, layering every enabled mod on top of the vanilla Data folder).</summary>
@@ -112,6 +120,7 @@ public sealed class ExtractSettings
         @"*\clutter\*",
         @"*\architecture\*",
         @"*\dungeons\*",
+        @"*\glaciers\*",
     };
 
     /// <summary>Case-insensitive substrings. A record whose EditorID contains one of these is
@@ -120,5 +129,5 @@ public sealed class ExtractSettings
     /// through real use: "marker" and "lod" rule out non-visual/LOD records that match "snow" in
     /// name only, "glacier" rules out glacier-specific records that aren't real candidates for
     /// this tool's own snow-mesh fixes.</summary>
-    public List<string> EditorIdBlacklistKeywords { get; set; } = new() { "marker", "glacier", "lod" };
+    public List<string> EditorIdBlacklistKeywords { get; set; } = new() { "marker", "glacier", "lod", "ice", "frozen", "icicle" };
 }

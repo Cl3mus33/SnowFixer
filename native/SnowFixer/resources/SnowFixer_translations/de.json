@@ -81,6 +81,11 @@
       "checkbox": "Rocks01/SnowRocks01-Formen auf Berg-/Fels-/Tundra-Meshes ausblenden",
       "help": "Vermeidet Z-Fighting mit Skyrims eigenen, auf Decals basierenden dynamischen Schnee-Shadern, indem jede mit „Rocks01“/„SnowRocks01“ texturierte Form ausgeblendet wird - nur auf Berg-/Fels-/Tundra-Meshes. Blendet die Form aus, statt sie zu löschen, sodass keine Änderungen am Plugin nötig sind. Betrifft keine DirtCliffs-Meshes."
     },
+    "removeIceSnowMaterial": {
+      "label": "Schneematerial auf Eis",
+      "checkbox": "Gletscher-Schneematerial von Statics entfernen",
+      "help": "Entfernt das Material Object SnowMaterialGlacier / SnowMaterialGlacierSlab von jedem Static, der es verwendet, damit kein Schnee auf Gletscher und Eis projiziert wird. Ändert nur SnowFixer.esp - kein Mesh wird verändert, das eigene Shader-Material des Eises bleibt erhalten."
+    },
     "tab": {
       "general": "Allgemein",
       "options": "Optionen"
