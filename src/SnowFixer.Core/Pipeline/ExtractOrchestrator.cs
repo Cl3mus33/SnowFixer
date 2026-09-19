@@ -6,6 +6,7 @@ using Mutagen.Bethesda.Plugins.Order;
 using Mutagen.Bethesda.Skyrim;
 using nifly;
 using SnowFixer.Core.Configuration;
+using SnowFixer.Core.Nif;
 using SnowFixer.Core.Scanning;
 
 namespace SnowFixer.Core.Pipeline;
@@ -531,7 +532,7 @@ public sealed class ExtractOrchestrator
         var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
 
         using var nifFile = new NifFile();
-        if (nifFile.Load(fullPath) != 0)
+        if (NifIo.Load(nifFile, fullPath) != 0)
         {
             _diagnostics.Add($"'{label}': failed to reload duplicated mesh for Alternate Texture baking.");
             return false;
@@ -590,7 +591,7 @@ public sealed class ExtractOrchestrator
         if (baked)
         {
             var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
-            if (nifFile.Save(fullPath, saveOptions) != 0)
+            if (NifIo.Save(nifFile, fullPath, saveOptions) != 0)
             {
                 _diagnostics.Add($"'{label}': failed to save the mesh after baking Alternate Textures.");
                 return false;
@@ -616,7 +617,7 @@ public sealed class ExtractOrchestrator
         var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
 
         using var nifFile = new NifFile();
-        if (nifFile.Load(fullPath) != 0)
+        if (NifIo.Load(nifFile, fullPath) != 0)
         {
             _diagnostics.Add($"'{label}': failed to reload duplicated mesh for shader flag fixups.");
             return false;
@@ -662,7 +663,7 @@ public sealed class ExtractOrchestrator
         if (patched)
         {
             var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
-            if (nifFile.Save(fullPath, saveOptions) != 0)
+            if (NifIo.Save(nifFile, fullPath, saveOptions) != 0)
             {
                 _diagnostics.Add($"'{label}': failed to save the mesh after shader flag fixups.");
                 return false;
@@ -701,7 +702,7 @@ public sealed class ExtractOrchestrator
         var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
 
         using var nifFile = new NifFile();
-        if (nifFile.Load(fullPath) != 0)
+        if (NifIo.Load(nifFile, fullPath) != 0)
         {
             _diagnostics.Add($"'{label}': failed to reload duplicated mesh for decal shape hiding.");
             return false;
@@ -743,7 +744,7 @@ public sealed class ExtractOrchestrator
             header.DeleteBlockByType("BSShaderTextureSet", true);
 
             var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
-            if (nifFile.Save(fullPath, saveOptions) != 0)
+            if (NifIo.Save(nifFile, fullPath, saveOptions) != 0)
             {
                 _diagnostics.Add($"'{label}': failed to save the mesh after hiding decal shapes.");
                 return false;
@@ -845,7 +846,7 @@ public sealed class ExtractOrchestrator
         var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
 
         using var nifFile = new NifFile();
-        if (nifFile.Load(fullPath) != 0)
+        if (NifIo.Load(nifFile, fullPath) != 0)
         {
             _diagnostics.Add($"'{label}': failed to reload duplicated mesh for vertex color neutralization.");
             return false;
@@ -879,7 +880,7 @@ public sealed class ExtractOrchestrator
         if (neutralized)
         {
             var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
-            if (nifFile.Save(fullPath, saveOptions) != 0)
+            if (NifIo.Save(nifFile, fullPath, saveOptions) != 0)
             {
                 _diagnostics.Add($"'{label}': failed to save the mesh after neutralizing vertex colors.");
                 return false;
@@ -944,7 +945,7 @@ public sealed class ExtractOrchestrator
         var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
 
         using var nifFile = new NifFile();
-        if (nifFile.Load(fullPath) != 0)
+        if (NifIo.Load(nifFile, fullPath) != 0)
         {
             _diagnostics.Add($"'{label}': failed to reload duplicated mesh for collision material remapping.");
             return false;
@@ -1012,7 +1013,7 @@ public sealed class ExtractOrchestrator
         if (remapped)
         {
             var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
-            if (nifFile.Save(fullPath, saveOptions) != 0)
+            if (NifIo.Save(nifFile, fullPath, saveOptions) != 0)
             {
                 _diagnostics.Add($"'{label}': failed to save the mesh after remapping collision materials.");
                 return false;
@@ -1039,7 +1040,7 @@ public sealed class ExtractOrchestrator
         var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
 
         using var nifFile = new NifFile();
-        if (nifFile.Load(fullPath) != 0)
+        if (NifIo.Load(nifFile, fullPath) != 0)
         {
             _diagnostics.Add($"'{label}': failed to reload duplicated mesh for DirtCliffs skirt retexturing.");
             return;
@@ -1088,7 +1089,7 @@ public sealed class ExtractOrchestrator
         nifFile.GetHeader().DeleteBlockByType("BSShaderTextureSet", true);
 
         var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
-        if (nifFile.Save(fullPath, saveOptions) != 0)
+        if (NifIo.Save(nifFile, fullPath, saveOptions) != 0)
         {
             _diagnostics.Add($"'{label}': failed to save the mesh after DirtCliffs skirt retexturing.");
             return;
@@ -1110,7 +1111,7 @@ public sealed class ExtractOrchestrator
         var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
 
         using var nifFile = new NifFile();
-        if (nifFile.Load(fullPath) != 0)
+        if (NifIo.Load(nifFile, fullPath) != 0)
         {
             _diagnostics.Add($"'{label}': failed to reload duplicated mesh for MountainSlab mask swap.");
             return;
@@ -1178,7 +1179,7 @@ public sealed class ExtractOrchestrator
         nifFile.GetHeader().DeleteBlockByType("BSShaderTextureSet", true);
 
         var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
-        if (nifFile.Save(fullPath, saveOptions) != 0)
+        if (NifIo.Save(nifFile, fullPath, saveOptions) != 0)
         {
             _diagnostics.Add($"'{label}': failed to save the mesh after MountainSlab mask swap.");
             return;

@@ -5,6 +5,17 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.0.11] - 2026-09-19
+
+### Fixed
+- **Fixed Snow Fixer failing on any path containing non-ASCII characters (e.g. Cyrillic)** - found via a Nexus report on the sibling tool AutoBlend.
+  Reproduced directly: nifly can't open or write a NIF whose path has any non-ASCII character (its
+  Windows path handling goes through a narrow-string API), so every mesh failed to load whenever the
+  temp folder (a Cyrillic/accented Windows user name puts `%TEMP%` itself out of reach) or the output
+  folder was non-ASCII. All NIF reads/writes now go through `NifIo`, which copies through a
+  guaranteed-ASCII temp file when needed; where a temp folder is used, it falls back to
+  `C:\ProgramData\SnowFixer\tmp` if the normal one isn't ASCII-only.
+
 ## [1.0.10] - 2026-09-18
 
 ### Fixed
