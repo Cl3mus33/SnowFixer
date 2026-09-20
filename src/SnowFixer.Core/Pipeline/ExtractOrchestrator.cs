@@ -253,13 +253,8 @@ public sealed class ExtractOrchestrator
         }
 
         var envDataFolder = materializedLoadOrder?.DataFolder ?? _dataFolder;
-        var envBuilder = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>(gameRelease)
-            .WithTargetDataFolder(envDataFolder);
-        _env = materializedLoadOrder is not null
-            ? envBuilder.WithLoadOrder(materializedLoadOrder.LoadOrder.ToArray()).Build()
-            : activeLoadOrder is not null
-                ? envBuilder.WithLoadOrder(activeLoadOrder).Build()
-                : envBuilder.Build();
+        _env = BuildEnvironment(gameRelease, envDataFolder,
+            materializedLoadOrder is not null ? materializedLoadOrder.LoadOrder.ToArray() : activeLoadOrder);
         using var envDisposable = _env;
 
         _mo2Reader = mo2Reader;
@@ -546,6 +541,30 @@ public sealed class ExtractOrchestrator
     // stripped, which wasn't wanted; only true landscape/terrain-type meshes (rocks, icebergs, snow
     // drifts, trees) should be affected. Relies on WildcardMatcher's leading-wildcard fix to also
     // catch the vanilla case where "Landscape" is the very first path segment.
+    // Builds the Mutagen environment; when an explicit load order was given, a plugin Mutagen can't
+    // even open (typically empty/corrupted - see UnreadablePluginFinder) is dropped with a diagnostic
+    // and the build retried, instead of one bad file aborting the whole run.
+    private IGameEnvironment<ISkyrimMod, ISkyrimModGetter> BuildEnvironment(GameRelease gameRelease, string dataFolder, ModKey[]? loadOrder)
+    {
+        var remaining = loadOrder?.ToList();
+        while (true)
+        {
+            var builder = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>(gameRelease)
+                .WithTargetDataFolder(dataFolder);
+            try
+            {
+                return remaining is null ? builder.Build() : builder.WithLoadOrder(remaining.ToArray()).Build();
+            }
+            catch (Exception ex) when (remaining is not null
+                && UnreadablePluginFinder.TryFind(ex, out var unreadable, out var reason)
+                && remaining.Remove(unreadable))
+            {
+                _diagnostics.Add($"Plugin '{unreadable.FileName}' could not be read and was skipped ({reason}). "
+                    + "It is probably empty or corrupted - consider reinstalling or removing that mod.");
+            }
+        }
+    }
+
     private static bool IsLandscapeMesh(string modelPath) => WildcardMatcher.MatchesAny(modelPath, LandscapeMeshFolderPatterns);
 
     private string SanitizeFileName(string name)
