@@ -38,6 +38,23 @@ auto makeSectionLabel(wxWindow* parent, const wxString& text) -> wxStaticText*
 }
 }
 
+// A wxChoice under the mouse cursor swallows the mouse wheel and changes its own selection instead of
+// letting the scrolled General tab scroll - so scrolling past Game Type silently flipped it to Legendary
+// Edition (which then greyed out and unchecked "Generate PBR slots"), reported directly on Nexus. Every
+// choice inside the scrolled panel hands the wheel to the panel instead; changing a value still works by
+// clicking the dropdown.
+static void forwardChoiceWheelToScrollPanel(wxWindow* root, wxScrolledWindow* scrollPanel)
+{
+    for (wxWindow* child : root->GetChildren()) {
+        if (auto* choice = wxDynamicCast(child, wxChoice)) {
+            choice->Bind(wxEVT_MOUSEWHEEL, [scrollPanel](wxMouseEvent& event) {
+                scrollPanel->GetEventHandler()->ProcessEvent(event);
+            });
+        }
+        forwardChoiceWheelToScrollPanel(child, scrollPanel);
+    }
+}
+
 LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exePath)
     : wxDialog(nullptr, wxID_ANY, "Snow Fixer", wxDefaultPosition, wxSize(760, 680), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
     , m_exePath(std::move(exePath))
@@ -77,7 +94,7 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     // its own content vertically, so the dialog itself can stay a fixed, always-on-screen size no
     // matter how many settings this tab ends up with.
     auto* generalPanel = new wxScrolledWindow(notebook);
-    generalPanel->SetScrollRate(0, 20);
+    generalPanel->SetScrollRate(0, 30);
     auto* generalSizer = new wxBoxSizer(wxVERTICAL);
 
     auto* introText = new wxStaticText(generalPanel, wxID_ANY,
@@ -463,6 +480,7 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
 
     generalPanel->SetSizer(generalSizer);
     generalPanel->FitInside();
+    forwardChoiceWheelToScrollPanel(generalPanel, generalPanel);
     // Without this, the sizer below still asks generalPanel for its own "best size" to size the
     // dialog around - which for a freshly-scrolled window defaults to its full (unscrolled) virtual
     // size, defeating the scrolling just added above. Capping it means the dialog's own initial
