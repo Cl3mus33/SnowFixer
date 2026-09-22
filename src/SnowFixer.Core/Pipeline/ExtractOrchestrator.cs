@@ -4,6 +4,7 @@ using Mutagen.Bethesda.Plugins.Exceptions;
 using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Order;
 using Mutagen.Bethesda.Skyrim;
+using Mutagen.Bethesda.Strings;
 using nifly;
 using SnowFixer.Core.Configuration;
 using SnowFixer.Core.Nif;
@@ -83,6 +84,7 @@ public sealed class ExtractOrchestrator
     private IGameEnvironment<ISkyrimMod, ISkyrimModGetter> _env = null!;
     private IGameFileProbe _fileProbe = null!;
     private Mo2InstanceReader? _mo2Reader;
+    private static readonly ModKey _outputModKey = new("SnowFixer", ModType.Plugin);
     private SkyrimMod _outputMod = null!;
     private readonly HashSet<string> _usedOutputPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _diagnostics = new();
@@ -253,8 +255,51 @@ public sealed class ExtractOrchestrator
         }
 
         var envDataFolder = materializedLoadOrder?.DataFolder ?? _dataFolder;
-        _env = BuildEnvironment(gameRelease, envDataFolder,
-            materializedLoadOrder is not null ? materializedLoadOrder.LoadOrder.ToArray() : activeLoadOrder);
+        var gameLanguage = GameLanguageDetector.Detect(
+            mo2Reader is not null ? mo2Reader.ProfilePath(mo2ProfileName!) : null, _settings.GameType);
+
+        // Materialize copies each active plugin's own .esm/.esp/.esl into a bare throwaway folder -
+        // no Strings/ subfolder, no BSAs - so, unqualified, Mutagen can never find ANY localized
+        // plugin's own STRINGS/DLSTRINGS/ILSTRINGS content from there at all. Vanilla/DLC/CC strings
+        // are always packed into the real Data folder's own BSAs (Skyrim - Interface.bsa) - pointing
+        // Mutagen's own BSA lookup at the real Data folder instead of the materialized one closes
+        // that gap. A mod's own LOOSE translation patch (rare) living only inside its own MO2 mod
+        // folder is not covered by this - that would need the same priority-aware resolution meshes
+        // already get, which is a separate, larger piece of work.
+        var looseStringsFolder = Path.Combine(_dataFolder, "Strings");
+        var stringsParameters = new StringsReadParameters
+        {
+            TargetLanguage = gameLanguage,
+            BsaFolderOverride = materializedLoadOrder is not null ? _dataFolder : null,
+            StringsFolderOverride = materializedLoadOrder is not null && Directory.Exists(looseStringsFolder) ? looseStringsFolder : null,
+        };
+
+        var sourceLoadOrder = materializedLoadOrder is not null ? materializedLoadOrder.LoadOrder.ToArray() : activeLoadOrder;
+
+        // A previous run's own SnowFixer.esp, left enabled in the user's own load order, is an
+        // OUTPUT this tool wrote, not a real source to scan winning overrides from - every run
+        // already wipes and regenerates its own output from scratch, so treating a stale prior copy
+        // as a source would perpetuate outdated data even before considering anything else. Reported
+        // directly on Nexus: SnowFixer.esp overrides some records with English text instead of the
+        // user's own localized (Russian) strings. Root-caused directly against the real modlist: the
+        // FULL text itself was correct with no language specified at all (see GameLanguageDetector's
+        // own reasoning for that half of the fix) - what actually broke it was SnowFixer.esp's own
+        // prior copy sitting at the END of the load order Mutagen was asked to build: with it
+        // present, EVERY OTHER plugin's own localized strings (not just SnowFixer.esp's own records)
+        // came back blank, regardless of target language; with it excluded, the exact same load order
+        // resolved correctly. Bisected directly against the user's real ~65-plugin load order to
+        // confirm SnowFixer.esp specifically (not merely "the last-loaded plugin" in general) is what
+        // breaks it.
+        var filteredLoadOrder = sourceLoadOrder?.Where(k => k != _outputModKey).ToArray();
+        if (filteredLoadOrder is not null && sourceLoadOrder is not null && filteredLoadOrder.Length != sourceLoadOrder.Length)
+        {
+            _diagnostics.Add("A previous run's own SnowFixer.esp was left active in the load order - "
+                + "excluded it from this run's own source scan (Snow Fixer always regenerates its own "
+                + "output from scratch, so a stale prior copy is never a real source, and its presence "
+                + "was also breaking every other localized (non-English) string in this run).");
+        }
+
+        _env = BuildEnvironment(gameRelease, envDataFolder, filteredLoadOrder, stringsParameters);
         using var envDisposable = _env;
 
         _mo2Reader = mo2Reader;
@@ -263,7 +308,7 @@ public sealed class ExtractOrchestrator
             : new ArchiveAwareFileProbe(_dataFolder, gameRelease, _diagnostics.Add);
         using var fileProbeDisposable = _fileProbe;
 
-        _outputMod = new SkyrimMod(new ModKey("SnowFixer", ModType.Plugin), skyrimRelease);
+        _outputMod = new SkyrimMod(_outputModKey, skyrimRelease);
 
         Report("Scanning records...");
 
@@ -603,13 +648,14 @@ public sealed class ExtractOrchestrator
     // Builds the Mutagen environment; when an explicit load order was given, a plugin Mutagen can't
     // even open (typically empty/corrupted - see UnreadablePluginFinder) is dropped with a diagnostic
     // and the build retried, instead of one bad file aborting the whole run.
-    private IGameEnvironment<ISkyrimMod, ISkyrimModGetter> BuildEnvironment(GameRelease gameRelease, string dataFolder, ModKey[]? loadOrder)
+    private IGameEnvironment<ISkyrimMod, ISkyrimModGetter> BuildEnvironment(GameRelease gameRelease, string dataFolder, ModKey[]? loadOrder, StringsReadParameters stringsParameters)
     {
         var remaining = loadOrder?.ToList();
         while (true)
         {
             var builder = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>(gameRelease)
-                .WithTargetDataFolder(dataFolder);
+                .WithTargetDataFolder(dataFolder)
+                .WithStringParameters(stringsParameters);
             try
             {
                 return remaining is null ? builder.Build() : builder.WithLoadOrder(remaining.ToArray()).Build();

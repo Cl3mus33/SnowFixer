@@ -5,6 +5,29 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.7] - 2026-09-22
+
+### Fixed
+- **`SnowFixer.esp` overrode some records with plain English text instead of the user's own
+  localized strings** - reported on Nexus (Russian install, Dawnguard's own "SEBench01" bench).
+  Root-caused directly against the real modlist to three separate, compounding causes:
+  - Nothing ever told Mutagen which language to resolve localized text in, so it silently defaulted
+    to English regardless of the player's actual game language. Snow Fixer now reads `sLanguage` from
+    the MO2 profile's own Skyrim.ini (falling back to the real game's Documents one) and resolves
+    strings in that language.
+  - Under Mod Organizer 2, the load order Mutagen builds from is materialized into a bare temp folder
+    holding only the active plugins themselves - no Strings/ folder, no BSAs - so vanilla/DLC/CC's own
+    localized text (packed in `Skyrim - Interface.bsa`) could never be found at all. Mutagen's own BSA
+    lookup is now pointed at the real Data folder instead.
+  - **The actual trigger**: a previous run's own `SnowFixer.esp`, left active in the load order (the
+    normal state after using the tool once), broke localized-string resolution for the ENTIRE
+    environment the moment it was present - not just its own records, every other plugin's localized
+    text came back blank too, confirmed by bisecting a real ~65-plugin load order down to that one
+    plugin. Snow Fixer already wipes and regenerates its own output from scratch every run, so a stale
+    prior copy was never a real source to scan to begin with - it's now excluded from the load order
+    Mutagen builds, with a diagnostic when this happens.
+
+
 ## [1.2.6] - 2026-09-22
 
 ### Fixed
