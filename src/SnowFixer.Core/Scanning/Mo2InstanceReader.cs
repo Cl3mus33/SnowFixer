@@ -47,8 +47,15 @@ public sealed class Mo2InstanceReader : IDisposable
     // exposing that back.
     private readonly Dictionary<IArchiveReader, string> _readerArchivePaths = new();
 
-    public Mo2InstanceReader(string instancePath, string profileName, GameRelease gameRelease)
+    // Reported straight to the caller rather than swallowed - see ArchiveAwareFileProbe's own
+    // identical field for the real report this closes ("every static reverts to vanilla" with no
+    // error anywhere, traced to a mod's own archive silently failing to open). Optional (defaults
+    // to a no-op) so existing callers that don't care still compile unchanged.
+    private readonly Action<string> _onDiagnostic;
+
+    public Mo2InstanceReader(string instancePath, string profileName, GameRelease gameRelease, Action<string>? onDiagnostic = null)
     {
+        _onDiagnostic = onDiagnostic ?? (_ => { });
         instancePath = ResolveInstancePath(instancePath);
         InstancePath = instancePath;
         _gameRelease = gameRelease;
@@ -286,10 +293,13 @@ public sealed class Mo2InstanceReader : IDisposable
                     readers.Add(reader);
                     _readerArchivePaths[reader] = archivePath;
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Skip archives Mutagen can't parse (corrupt/unsupported format) rather than
                     // failing the whole run over one bad file.
+                    _onDiagnostic($"Archive '{archivePath}' could not be opened and was skipped entirely - "
+                        + $"every file it would have provided falls back to a lower-priority source instead. "
+                        + $"{ex.GetType().Name}: {ex.Message}");
                 }
             }
         }
@@ -323,9 +333,13 @@ public sealed class Mo2InstanceReader : IDisposable
                 index.TryAdd(archiveFile.Path, archiveFile);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // Leave the index as whatever was collected before the failure (possibly empty).
+            _readerArchivePaths.TryGetValue(reader, out var archivePath);
+            _onDiagnostic($"Archive '{archivePath ?? reader.ToString()}' stopped indexing partway through "
+                + $"(its own file listing is malformed past that point) - only what was already found in "
+                + $"it before this is usable. {ex.GetType().Name}: {ex.Message}");
         }
 
         _archiveIndexes[reader] = index;

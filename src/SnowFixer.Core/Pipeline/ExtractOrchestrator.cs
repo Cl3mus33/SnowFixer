@@ -197,7 +197,7 @@ public sealed class ExtractOrchestrator
         }
 
         using var mo2Reader = mo2ProfileName is not null
-            ? new Mo2InstanceReader(_settings.Mo2InstancePath, mo2ProfileName, gameRelease)
+            ? new Mo2InstanceReader(_settings.Mo2InstancePath, mo2ProfileName, gameRelease, _diagnostics.Add)
             : null;
 
         // Mutagen loads every plugin from one physical Data folder — it has no notion of MO2's
@@ -259,8 +259,8 @@ public sealed class ExtractOrchestrator
 
         _mo2Reader = mo2Reader;
         _fileProbe = mo2Reader is not null
-            ? new Mo2ModlistFileProbe(mo2Reader, _dataFolder, gameRelease)
-            : new ArchiveAwareFileProbe(_dataFolder, gameRelease);
+            ? new Mo2ModlistFileProbe(mo2Reader, _dataFolder, gameRelease, _diagnostics.Add)
+            : new ArchiveAwareFileProbe(_dataFolder, gameRelease, _diagnostics.Add);
         using var fileProbeDisposable = _fileProbe;
 
         _outputMod = new SkyrimMod(new ModKey("SnowFixer", ModType.Plugin), skyrimRelease);

@@ -30,8 +30,17 @@ public sealed class ArchiveAwareFileProbe : IGameFileProbe
     // physical archive file itself, and IArchiveReader has no public property exposing that back.
     private readonly Dictionary<IArchiveReader, string> _readerArchivePaths = new();
 
-    public ArchiveAwareFileProbe(string dataRoot, GameRelease gameRelease)
+    // Reported straight to the caller (ExtractOrchestrator's own diagnostics list) rather than
+    // swallowed - a mod whose entire archive silently fails to open used to mean every one of its
+    // meshes fell back to whatever the next-lower-priority mod (or vanilla) provides, completely
+    // invisibly: reported directly on Nexus as "every static reverts to vanilla" with no error
+    // shown anywhere, for a modlist where the actual cause turned out to be exactly this. Optional
+    // (defaults to a no-op) so existing callers that don't care still compile unchanged.
+    private readonly Action<string> _onDiagnostic;
+
+    public ArchiveAwareFileProbe(string dataRoot, GameRelease gameRelease, Action<string>? onDiagnostic = null)
     {
+        _onDiagnostic = onDiagnostic ?? (_ => { });
         _looseProbe = new LooseFileProbe(dataRoot);
 
         var archivePaths = GetApplicableArchivePathsSafe(gameRelease, dataRoot);
@@ -47,9 +56,11 @@ public sealed class ArchiveAwareFileProbe : IGameFileProbe
                 readers.Add(reader);
                 _readerArchivePaths[reader] = archivePath.ToString();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Skip archives Mutagen can't parse (corrupt/unsupported format).
+                _onDiagnostic($"Archive '{archivePath}' could not be opened and was skipped entirely - "
+                    + $"every file it would have provided falls back to a lower-priority source instead. "
+                    + $"{ex.GetType().Name}: {ex.Message}");
             }
         }
         _archiveReaders = readers;
@@ -126,12 +137,16 @@ public sealed class ArchiveAwareFileProbe : IGameFileProbe
                 index.TryAdd(archiveFile.Path, archiveFile);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // A malformed/corrupt archive's own internal filename table can throw while being
             // enumerated here. Whatever this archive already indexed before hitting the bad part
             // stays usable - better than discarding it entirely - but nothing more from it will
             // ever be found.
+            _readerArchivePaths.TryGetValue(reader, out var archivePath);
+            _onDiagnostic($"Archive '{archivePath ?? reader.ToString()}' stopped indexing partway through "
+                + $"(its own file listing is malformed past that point) - only what was already found in "
+                + $"it before this is usable. {ex.GetType().Name}: {ex.Message}");
         }
 
         _archiveIndexes[reader] = index;

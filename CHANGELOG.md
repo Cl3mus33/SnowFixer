@@ -5,6 +5,22 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.6] - 2026-09-22
+
+### Fixed
+- **A mod's own BSA/BA2 archive silently failing to open no longer falls back to a lower-priority
+  source (or vanilla) with zero indication anything went wrong** - reported on Nexus: with Skyrim 3D
+  Rocks installed (ships `S3DRocks.bsa`/`S3DRocks - Textures.bsa`), every static reverted to its
+  vanilla mesh in Snow Fixer's own output, with no error shown anywhere. Archive open/index failures
+  were being caught and silently skipped in three places (`ArchiveAwareFileProbe` and
+  `Mo2InstanceReader`, both the vanilla-Data-folder and the per-mod-archive paths) - a mod whose
+  entire archive can't be read used to mean every file it would have provided fell through to
+  whatever lower-priority source (often vanilla) provides instead, completely invisibly. Every one of
+  those now adds a clear diagnostic naming the archive and the underlying error, instead of staying
+  silent. Verified directly: a deliberately corrupted archive now surfaces "Archive '...' could not be
+  opened and was skipped entirely..." in the run's own diagnostics.
+
+
 ## [1.2.5] - 2026-09-22
 
 ### Fixed

@@ -13,10 +13,10 @@ public sealed class Mo2ModlistFileProbe : IGameFileProbe
     private readonly Mo2InstanceReader _reader;
     private readonly ArchiveAwareFileProbe _vanillaProbe;
 
-    public Mo2ModlistFileProbe(Mo2InstanceReader reader, string dataFolder, GameRelease gameRelease)
+    public Mo2ModlistFileProbe(Mo2InstanceReader reader, string dataFolder, GameRelease gameRelease, Action<string>? onDiagnostic = null)
     {
         _reader = reader;
-        _vanillaProbe = new ArchiveAwareFileProbe(dataFolder, gameRelease);
+        _vanillaProbe = new ArchiveAwareFileProbe(dataFolder, gameRelease, onDiagnostic);
     }
 
     public bool Exists(string relativeDataPath) =>
