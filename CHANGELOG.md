@@ -5,6 +5,28 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-09-22
+
+### Fixed
+- **One plugin with a malformed Cell/Worldspace group no longer aborts an entire run** - reported on
+  Nexus (`DeepSeek.esp`, `OverflowException`): finding any LAND record needs Mutagen to open every
+  mod's own Cells/Worldspace group tree, even mods that never touch a single landscape record, so one
+  plugin with a corrupted group header there took down landscape scanning across the whole load order
+  - nothing was written at all, not even everything already scanned before that point. Landscape
+  vertex color clearing is now skipped (with a diagnostic naming the plugin) instead, while every
+  other pass already completed is unaffected.
+- **Fixed a mesh shared between snow and non-snow uses via Alternate Textures being treated as snow
+  purely because of its file name** - reported on Nexus: Snow Fixer applying a mismatched/wrong
+  texture to meshes that should be ash or dirt. Confirmed directly against vanilla data:
+  `DLC01AshDriftL01`-`L04` and `DLC02AshDuneVolcAsh01L01`/`L02` (Solstheim ash piles/dunes) reuse
+  `Landscape\SnowDrifts\SnowDriftL0*.nif` with an Alternate Texture redirecting the diffuse to ash -
+  matching "snow" purely by mesh path (with no EditorID signal) treated these as snow records, baking
+  a duplicate and clearing/patching things a genuinely-ash record was never meant to have touched. A
+  record whose EditorID gives no snow signal is no longer treated as snow when every one of its own
+  Alternate Textures also resolves to a non-snow diffuse; a record with even one legitimately
+  snow-targeted Alternate Texture (e.g. `SnowDriftL02_GlacierBlend`) is unaffected.
+
+
 ## [1.2.4] - 2026-09-21
 
 ### Fixed

@@ -323,7 +323,28 @@ public sealed class ExtractOrchestrator
 
         if (_settings.LandscapeVertexColorMode != LandscapeVertexColorMode.None)
         {
-            PatchLandscapes(Report);
+            try
+            {
+                PatchLandscapes(Report);
+            }
+            catch (Exception ex)
+            {
+                // Finding any LAND record needs Mutagen to open every mod's own Cells/Worldspace
+                // group tree (Landscape().WinningContextOverrides()), even mods that never touch a
+                // single landscape record - so one plugin with a malformed group header anywhere in
+                // that tree aborts landscape scanning across the ENTIRE load order, not just its own
+                // records. Reported directly on Nexus: an OverflowException surfaced this way from a
+                // single corrupted plugin, taking down the whole run (nothing was scanned at all,
+                // not even the unrelated Static/Flora/etc. passes already completed above by this
+                // point). Landscape vertex color clearing is skipped instead - everything already
+                // scanned above is unaffected and still gets written normally.
+                var reason = UnreadablePluginFinder.TryFind(ex, out var badPlugin, out var innerReason)
+                    ? $"plugin '{badPlugin.FileName}' could not be read ({innerReason})"
+                    : $"{ex.GetType().Name}: {ex.Message}";
+                _diagnostics.Add($"Landscape vertex color clearing was skipped: {reason}. It is probably "
+                    + "corrupted - consider reinstalling or removing that mod. Everything else in this run "
+                    + "completed normally.");
+            }
         }
 
         var dirtCliffsSnowVariantGenerated = false;
@@ -454,9 +475,47 @@ public sealed class ExtractOrchestrator
         editorId.EndsWith("SN", StringComparison.OrdinalIgnoreCase)
         && !editorId.EndsWith("NoSN", StringComparison.OrdinalIgnoreCase);
 
+    private static bool EditorIdSaysSnow(string? editorId) =>
+        editorId is not null && (editorId.Contains("snow", StringComparison.OrdinalIgnoreCase) || EndsWithSnowSuffix(editorId));
+
     private static bool IsSnow(string? editorId, string? modelPath) =>
-        (editorId is not null && (editorId.Contains("snow", StringComparison.OrdinalIgnoreCase) || EndsWithSnowSuffix(editorId)))
+        EditorIdSaysSnow(editorId)
         || (modelPath is not null && modelPath.Contains("snow", StringComparison.OrdinalIgnoreCase));
+
+    // A shared mesh whose own FILE NAME happens to say "snow" (e.g. Landscape\SnowDrifts\...) is
+    // reused across unrelated contexts via Alternate Textures - confirmed directly against real
+    // vanilla data: DLC01AshDriftL01/L02/L03/L04 and DLC02AshDuneVolcAsh01L01/L02 (Solstheim ash
+    // piles/dunes, EditorIDs say nothing about snow) both reuse Landscape\SnowDrifts\SnowDriftL0*.nif
+    // with an Alternate Texture repointing the diffuse to ash. Matching purely on the base mesh path
+    // (the only signal IsSnow had before) treated these as snow records - reported directly on
+    // Nexus: Snow Fixer duplicating/patching them left the wrong texture applied to snow-adjacent
+    // but non-snow shapes on other meshes reusing the same trick (Lordbound's own ash/dirt piles were
+    // named as an example). Only demotes when EditorID gives no snow signal of its own AND every
+    // Alternate Texture's own resolved diffuse also says nothing about snow - a record with even one
+    // legitimately snow-targeted Alternate Texture (e.g. SnowDriftL02_GlacierBlend) is left alone.
+    private bool IsSnowDemotedByAlternateTextures(string? editorId, IReadOnlyList<IAlternateTextureGetter>? altTexs)
+    {
+        if (EditorIdSaysSnow(editorId) || altTexs is not { Count: > 0 })
+        {
+            return false;
+        }
+
+        foreach (var altTex in altTexs)
+        {
+            if (!_env.LinkCache.TryResolve<ITextureSetGetter>(altTex.NewTexture.FormKey, out var txst))
+            {
+                // Unresolvable - can't prove it's NOT snow, so don't demote on its account.
+                return false;
+            }
+
+            if ((txst.Diffuse?.GivenPath ?? string.Empty).Contains("snow", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     // Clears STAT.DNAM's Material link (the projected snow/ash overlay - see the Direction Material
     // notes on ExtractSettings.RemoveIceSnowMaterial) on every static whose winning Material points at
@@ -1300,6 +1359,32 @@ public sealed class ExtractOrchestrator
         _mountainSlabMaskSwapped++;
     }
 
+    // Shared by ProcessType's early demotion check (reportFailure: false - the record may not even
+    // end up in scope, so a malformed path there shouldn't count as a real failure) and its main,
+    // in-scope fetch (reportFailure: true - matches the original diagnostic/counter behavior).
+    private IReadOnlyList<IAlternateTextureGetter>? TryGetAlternateTextures<TGetter>(
+        TGetter record, Func<TGetter, IReadOnlyList<IAlternateTextureGetter>?> getAlternateTextures,
+        string typeName, string? editorId, bool reportFailure)
+        where TGetter : class, ISkyrimMajorRecordGetter
+    {
+        try
+        {
+            return getAlternateTextures(record);
+        }
+        catch (AssetPathMisalignedException ex)
+        {
+            if (reportFailure)
+            {
+                _malformedRecordsSkipped++;
+                _diagnostics.Add(
+                    $"{typeName} {record.FormKey} ({editorId ?? "<no EditorID>"}): invalid alternate texture path; " +
+                    $"mesh was generated but alternate textures were left as-is. {ex.Message}");
+            }
+
+            return null;
+        }
+    }
+
     private void ProcessType<TGetter>(
         IEnumerable<TGetter> winningOverrides,
         Func<TGetter, string?> getEditorId,
@@ -1334,6 +1419,18 @@ public sealed class ExtractOrchestrator
 
             var isSnowMatch = IsSnow(editorId, modelPath);
             var isLandscape = IsLandscapeMesh(modelPath);
+
+            // Only a path-only match (EditorID itself gives no snow signal) is ever a demotion
+            // candidate - fetching every record's own Alternate Textures just to check this would
+            // both cost a lookup per record most of which are never touched otherwise, and surface
+            // AssetPathMisalignedException diagnostics for records that were never in scope to
+            // begin with. Re-fetched (cheaply, from the already-parsed record) below once a record
+            // is confirmed in scope, rather than threaded through as a local.
+            if (isSnowMatch && !EditorIdSaysSnow(editorId)
+                && IsSnowDemotedByAlternateTextures(editorId, TryGetAlternateTextures(record, getAlternateTextures, typeName, editorId, reportFailure: false)))
+            {
+                isSnowMatch = false;
+            }
 
             // MeshVertexColorMode.All additionally pulls in every OTHER landscape-folder mesh
             // (rocks, cliffs, ... that never matched "snow" on their own) purely so its vertex
@@ -1374,20 +1471,7 @@ public sealed class ExtractOrchestrator
             var overrideModel = getOrAddOverrideModel(record);
             overrideModel.File = duplicatedPath;
 
-            IReadOnlyList<IAlternateTextureGetter>? altTexs;
-            try
-            {
-                altTexs = getAlternateTextures(record);
-            }
-            catch (AssetPathMisalignedException ex)
-            {
-                _malformedRecordsSkipped++;
-                _diagnostics.Add(
-                    $"{typeName} {record.FormKey} ({editorId ?? "<no EditorID>"}): invalid alternate texture path; " +
-                    $"mesh was generated but alternate textures were left as-is. {ex.Message}");
-                altTexs = null;
-            }
-
+            var altTexs = TryGetAlternateTextures(record, getAlternateTextures, typeName, editorId, reportFailure: true);
             if (altTexs is { Count: > 0 } && BakeAlternateTextures(duplicatedPath, altTexs, editorId ?? modelPath))
             {
                 overrideModel.AlternateTextures = null;
