@@ -5,6 +5,19 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.8] - 2026-09-22
+
+### Changed
+- **A previous run's own `SnowFixer.esp` still being active now refuses the run outright instead of
+  silently excluding it and continuing** - matches AutoBlend/AutoSeasons' own identical guard for the
+  same underlying problem (their own output plugin compounding on itself run after run). The v1.2.7
+  fix already excluded it from the source scan automatically; this is stricter - it stops the run
+  before anything is touched (so a stale prior output is never even at risk of being wiped while
+  refusing) and tells you to disable "Snow Fixer Output" in your mod manager first, then re-enable it
+  once the new run has finished. The v1.2.7 exclusion still applies underneath as a fallback for the
+  rarer case where the output folder was moved/cleared without disabling the plugin.
+
+
 ## [1.2.7] - 2026-09-22
 
 ### Fixed

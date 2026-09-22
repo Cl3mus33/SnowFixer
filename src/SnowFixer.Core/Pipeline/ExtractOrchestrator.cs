@@ -142,13 +142,58 @@ public sealed class ExtractOrchestrator
                 + "(e.g. your mod manager's own \"Snow Fixer Output\" mod folder).");
         }
 
+        var gameRelease = ToGameRelease(_settings.GameType);
+        var skyrimRelease = ToSkyrimRelease(_settings.GameType);
+
+        string? mo2ProfileName = null;
+        if (_settings.ModManager == ModManagerType.ModOrganizer2)
+        {
+            mo2ProfileName = _settings.Mo2ProfileName;
+            if (string.IsNullOrWhiteSpace(mo2ProfileName))
+            {
+                if (!Mo2InstanceReader.TryDetectSelectedProfile(_settings.Mo2InstancePath, out var detectedProfile))
+                {
+                    throw new InvalidOperationException(
+                        $"No MO2 profile was selected and ModOrganizer.ini did not identify one. " +
+                        $"Select a profile in the launcher or set selected_profile in '{Path.Combine(_settings.Mo2InstancePath, "ModOrganizer.ini")}'.");
+                }
+
+                mo2ProfileName = detectedProfile;
+            }
+        }
+
+        using var mo2Reader = mo2ProfileName is not null
+            ? new Mo2InstanceReader(_settings.Mo2InstancePath, mo2ProfileName, gameRelease, _diagnostics.Add)
+            : null;
+
+        // Refuse to run while a previous run's own output is still active in the merged Data view
+        // (e.g. the "Snow Fixer Output" mod is still enabled in MO2). Scanning its own previous
+        // output as if it were a real mod means every record derives from what THIS tool generated
+        // last time rather than the real source mods - each run compounds on the last one. Confirmed
+        // directly to also break localized-string resolution for the ENTIRE environment the moment
+        // it's present, not just its own records - every other plugin's own localized text came back
+        // blank too, reported directly on Nexus. Checked BEFORE the wipe below, so a run refused this
+        // way never destroys the last good output while doing so. Matches AutoBlend/AutoSeasons' own
+        // identical guard for the same underlying problem.
+        var previousEspPath = Path.Combine(_outputFolder, "SnowFixer.esp");
+        var previousLogPath = Path.Combine(_outputFolder, "SnowFixer-log.txt");
+        var ownOutputStillActive = mo2Reader is not null
+            ? mo2Reader.ExistsLooseOrArchived("SnowFixer.esp")
+            : File.Exists(Path.Combine(_dataFolder, "SnowFixer.esp"));
+        if (ownOutputStillActive && (File.Exists(previousEspPath) || File.Exists(previousLogPath)))
+        {
+            throw new InvalidOperationException(
+                "Snow Fixer's own output (SnowFixer.esp) is still enabled in your mod manager. Please "
+                + "disable it (e.g. the \"Snow Fixer Output\" mod in MO2) before starting a new "
+                + "generation, then re-enable it once this run has finished - otherwise this run would "
+                + "scan its own previous output as if it were a real mod, producing incorrect results.");
+        }
+
         // Wipe any previous run's own meshes/plugin before regenerating - this folder is entirely
         // owned by this tool (never hand-edited), so a stale leftover from an earlier run (e.g. a
         // record type that used to be scanned but no longer is) would otherwise sit on disk
         // forever, unreferenced by the fresh ESP but still shipped to players as dead weight.
         var outputMeshesParent = Path.Combine(_outputFolder, "meshes");
-        var previousEspPath = Path.Combine(_outputFolder, "SnowFixer.esp");
-        var previousLogPath = Path.Combine(_outputFolder, "SnowFixer-log.txt");
 
         if (Directory.Exists(outputMeshesParent))
         {
@@ -177,30 +222,6 @@ public sealed class ExtractOrchestrator
         Directory.CreateDirectory(_outputFolder);
 
         Report("Loading game environment...");
-
-        var gameRelease = ToGameRelease(_settings.GameType);
-        var skyrimRelease = ToSkyrimRelease(_settings.GameType);
-
-        string? mo2ProfileName = null;
-        if (_settings.ModManager == ModManagerType.ModOrganizer2)
-        {
-            mo2ProfileName = _settings.Mo2ProfileName;
-            if (string.IsNullOrWhiteSpace(mo2ProfileName))
-            {
-                if (!Mo2InstanceReader.TryDetectSelectedProfile(_settings.Mo2InstancePath, out var detectedProfile))
-                {
-                    throw new InvalidOperationException(
-                        $"No MO2 profile was selected and ModOrganizer.ini did not identify one. " +
-                        $"Select a profile in the launcher or set selected_profile in '{Path.Combine(_settings.Mo2InstancePath, "ModOrganizer.ini")}'.");
-                }
-
-                mo2ProfileName = detectedProfile;
-            }
-        }
-
-        using var mo2Reader = mo2ProfileName is not null
-            ? new Mo2InstanceReader(_settings.Mo2InstancePath, mo2ProfileName, gameRelease, _diagnostics.Add)
-            : null;
 
         // Mutagen loads every plugin from one physical Data folder — it has no notion of MO2's
         // per-mod folders. For MO2 we materialize just the active plugins.txt entries (resolved
