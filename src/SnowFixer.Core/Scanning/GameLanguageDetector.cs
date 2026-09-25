@@ -1,3 +1,5 @@
+using System.Text;
+using Mutagen.Bethesda.Plugins.Binary.Streams;
 using Mutagen.Bethesda.Strings;
 using SnowFixer.Core.Configuration;
 
@@ -32,6 +34,34 @@ public static class GameLanguageDetector
         ["JAPANESE"] = Language.Japanese,
         ["CHINESE"] = Language.Chinese,
     };
+
+    // The ANSI code page Skyrim itself reads a NON-localized plugin's inline text with, per game
+    // language. Only languages that are NOT plain Western European need an entry: Mutagen's default
+    // write encoding is Windows-1252, which cannot hold these scripts at all - confirmed directly
+    // against a real Russian install, where Dawnguard's own "SEBench01" FULL ("Скамья") was written
+    // into SnowFixer.esp as six literal '?' bytes. Windows-1251 is what Russian plugins ship with, and
+    // xEdit (UTF-8 first, then falling back to 1251 for Russian) reads those bytes back correctly.
+    private static readonly Dictionary<Language, int> LegacyCodePages = new()
+    {
+        [Language.Polish] = 1250,
+        [Language.Russian] = 1251,
+        [Language.Japanese] = 932,
+        [Language.Chinese] = 936,
+    };
+
+    /// <summary>The encoding to write SnowFixer.esp's inline (non-localized) text with, or null when
+    /// Mutagen's own default already suits the language.</summary>
+    public static EncodingBundle? GetPlainPluginEncodings(Language language)
+    {
+        if (!LegacyCodePages.TryGetValue(language, out var codePage))
+        {
+            return null;
+        }
+
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var encoding = new MutagenEncodingWrapper(Encoding.GetEncoding(codePage));
+        return new EncodingBundle(encoding, encoding);
+    }
 
     /// <summary>Tries the MO2 profile's own Skyrim.ini first (only present when the instance uses
     /// per-profile inis - MO2's own "profile_local_inis" setting), then the real game's Documents

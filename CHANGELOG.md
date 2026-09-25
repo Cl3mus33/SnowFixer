@@ -5,6 +5,20 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.9] - 2026-09-25
+
+### Fixed
+- **Non-Western text (Russian, Polish, Japanese, Chinese) came out as literal `?` characters in
+  `SnowFixer.esp`** - the v1.2.7 language fix resolved the right string ("Скамья") but the plugin was
+  still written in Mutagen's default Western (Windows-1252) encoding, which can't hold those
+  scripts. The plugin is now written in the language's own ANSI code page (1251 for Russian, 1250
+  Polish, 932 Japanese, 936 Chinese), the same one Russian/Polish plugins normally ship with and that
+  xEdit reads back correctly. Western languages are unchanged.
+- **`SnowFixer.esp` no longer contains ITM (Identical To Master) records** - when a record's
+  EditorID is its mesh's own filename (e.g. `DirtCliffs01` -> `DirtCliffs01.nif`), the duplicate
+  mesh lands on the original path and the record's Model.File comes out unchanged. The mesh is still
+  updated in place; the pointless override record is now dropped (179 of them on a real modlist).
+
 ## [1.2.8] - 2026-09-22
 
 ### Changed

@@ -104,6 +104,7 @@ public sealed class ExtractOrchestrator
     private int _decalShapesHidden;
     private int _decalCompanionShapesRetextured;
     private int _iceSnowMaterialsRemoved;
+    private int _itmOverridesRemoved;
     private int _nonSnowLandscapeMeshesIncluded;
     private int _landscapesPatched;
 
@@ -427,6 +428,9 @@ public sealed class ExtractOrchestrator
         // setup - see RemoveLinksToUnavailableMasters.
         RemoveLinksToUnavailableMasters(IsPluginAvailable);
 
+        // Runs after every other pass so it sees each override's final shape.
+        RemoveOverridesIdenticalToMaster();
+
         // Flag the output as ESL (Light) whenever it actually fits that format's own new-record
         // range, matching AutoBlend's own identical logic - opt-in rather than default is the
         // wrong framing here, since there's no downside to a smaller plugin that still works
@@ -452,7 +456,13 @@ public sealed class ExtractOrchestrator
 
         Report("Writing plugin...");
         var espPath = Path.Combine(_outputFolder, "SnowFixer.esp");
-        _outputMod.BeginWrite.ToPath(espPath).WithNoLoadOrder().Write();
+        var writeBuilder = _outputMod.BeginWrite.ToPath(espPath).WithNoLoadOrder();
+        if (GameLanguageDetector.GetPlainPluginEncodings(gameLanguage) is { } plainEncodings)
+        {
+            writeBuilder = writeBuilder.WithEmbeddedEncodings(plainEncodings);
+        }
+
+        writeBuilder.Write();
 
         var result = new ExtractResult(
             _matched,
@@ -605,6 +615,53 @@ public sealed class ExtractOrchestrator
             _outputMod.Statics.GetOrAddAsOverride(record).Material.SetToNull();
             _iceSnowMaterialsRemoved++;
         }
+    }
+
+    // Drops every override that ended up byte-for-byte what the load order already resolves to (ITM,
+    // "Identical To Master") - xEdit flags them, and they buy nothing. Happens for real: when a
+    // record's EditorID is its mesh's own filename (vanilla's DirtCliffs01 -> DirtCliffs01.nif),
+    // DuplicateMesh's EditorID-based name lands on the ORIGINAL path, so the duplicate simply
+    // overwrites the mesh in place and Model.File comes out unchanged. The mesh file itself is
+    // still what matters there and stays; only the pointless record goes.
+    private void RemoveOverridesIdenticalToMaster()
+    {
+        var removed = 0;
+        removed += RemoveIdentical<Static, IStaticGetter>(_outputMod.Statics, _env.LinkCache, StaticMixIn.Equals);
+        removed += RemoveIdentical<MoveableStatic, IMoveableStaticGetter>(_outputMod.MoveableStatics, _env.LinkCache, MoveableStaticMixIn.Equals);
+        removed += RemoveIdentical<Flora, IFloraGetter>(_outputMod.Florae, _env.LinkCache, FloraMixIn.Equals);
+        removed += RemoveIdentical<Furniture, IFurnitureGetter>(_outputMod.Furniture, _env.LinkCache, FurnitureMixIn.Equals);
+        removed += RemoveIdentical<Door, IDoorGetter>(_outputMod.Doors, _env.LinkCache, DoorMixIn.Equals);
+        removed += RemoveIdentical<Container, IContainerGetter>(_outputMod.Containers, _env.LinkCache, ContainerMixIn.Equals);
+        _itmOverridesRemoved = removed;
+        if (removed > 0)
+        {
+            _diagnostics.Add($"Dropped {removed} override record(s) that came out identical to the record they override "
+                + "(their mesh was updated in place, so nothing about the record itself needed to change).");
+        }
+    }
+
+    private static int RemoveIdentical<TMajor, TGetter>(
+        Mutagen.Bethesda.Plugins.Records.IGroup<TMajor> group,
+        Mutagen.Bethesda.Plugins.Cache.ILinkCache linkCache,
+        Func<TGetter, TGetter, bool> areEqual)
+        where TMajor : class, Mutagen.Bethesda.Plugins.Records.IMajorRecord, TGetter
+        where TGetter : class, Mutagen.Bethesda.Plugins.Records.IMajorRecordGetter
+    {
+        var identical = new List<FormKey>();
+        foreach (var record in group)
+        {
+            if (linkCache.TryResolve<TGetter>(record.FormKey, out var winner) && areEqual(record, winner))
+            {
+                identical.Add(record.FormKey);
+            }
+        }
+
+        foreach (var formKey in identical)
+        {
+            group.Remove(formKey);
+        }
+
+        return identical.Count;
     }
 
     // A plugin counts as available when it's in the environment's own load order, or physically
