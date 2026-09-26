@@ -5,6 +5,21 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.10] - 2026-09-26
+
+### Fixed
+- **Non-English names in `SnowFixer.esp` were still unreadable in xEdit on Skyrim SE** - reported on Nexus
+  right after v1.2.9 (Russian install, Vortex): the `?` characters were gone but xEdit showed the raw
+  bytes with "No mapping for the Unicode character exists in the target multi-byte code page".
+  v1.2.9 wrote Russian/Polish/Japanese/Chinese text in the language's legacy ANSI code page (cp1251
+  for Russian), which is what Legendary Edition uses - but Skyrim SE stores every non-English language
+  as UTF-8 (confirmed directly against vanilla: `dawnguard_russian.strings` and
+  `dawnguard_french.strings` are 100% valid UTF-8, zero entries in a legacy code page; xEdit documents
+  the same rule for SSE). Snow Fixer now writes the plugin with the encoding the game itself uses for
+  the selected game version and language (UTF-8 on SE for every non-English language, the language's
+  ANSI code page on LE). English is unchanged. Verified byte-for-byte on the real Russian "SEBench01"
+  record: SE `D0 A1 D0 BA D0 B0 D0 BC D1 8C D1 8F`, LE `D1 EA E0 EC FC FF`.
+
 ## [1.2.9] - 2026-09-25
 
 ### Fixed

@@ -1,6 +1,8 @@
 using System.Text;
 using Mutagen.Bethesda.Plugins.Binary.Streams;
+using Mutagen.Bethesda;
 using Mutagen.Bethesda.Strings;
+using Mutagen.Bethesda.Strings.DI;
 using SnowFixer.Core.Configuration;
 
 namespace SnowFixer.Core.Scanning;
@@ -35,31 +37,27 @@ public static class GameLanguageDetector
         ["CHINESE"] = Language.Chinese,
     };
 
-    // The ANSI code page Skyrim itself reads a NON-localized plugin's inline text with, per game
-    // language. Only languages that are NOT plain Western European need an entry: Mutagen's default
-    // write encoding is Windows-1252, which cannot hold these scripts at all - confirmed directly
-    // against a real Russian install, where Dawnguard's own "SEBench01" FULL ("Скамья") was written
-    // into SnowFixer.esp as six literal '?' bytes. Windows-1251 is what Russian plugins ship with, and
-    // xEdit (UTF-8 first, then falling back to 1251 for Russian) reads those bytes back correctly.
-    private static readonly Dictionary<Language, int> LegacyCodePages = new()
-    {
-        [Language.Polish] = 1250,
-        [Language.Russian] = 1251,
-        [Language.Japanese] = 932,
-        [Language.Chinese] = 936,
-    };
-
     /// <summary>The encoding to write SnowFixer.esp's inline (non-localized) text with, or null when
-    /// Mutagen's own default already suits the language.</summary>
-    public static EncodingBundle? GetPlainPluginEncodings(Language language)
+    /// Mutagen's own default (Windows-1252, i.e. English) already suits the language.
+    ///
+    /// Mutagen's default write encoding is Windows-1252, which cannot hold Russian/Polish/Japanese/
+    /// Chinese at all - confirmed directly against a real Russian install, where Dawnguard's own
+    /// "SEBench01" FULL ("Скамья") was written into SnowFixer.esp as six literal '?' bytes. What to
+    /// write instead follows what the game itself does, via Mutagen's own per-game/per-language
+    /// choice: on Skyrim SE every non-English language is UTF-8 (verified directly against vanilla:
+    /// dawnguard_russian.strings holds 3227 non-ASCII entries, all valid UTF-8, none in cp1251 -
+    /// and xEdit documents the same rule for SSE), on Legendary Edition it is the language's own ANSI
+    /// code page. A first attempt wrote cp1251 unconditionally, which xEdit then refused to decode
+    /// on a real SE install ("No mapping for the Unicode character exists in the target code page").</summary>
+    public static EncodingBundle? GetPlainPluginEncodings(Language language, GameRelease gameRelease)
     {
-        if (!LegacyCodePages.TryGetValue(language, out var codePage))
+        if (language == Language.English)
         {
             return null;
         }
 
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        var encoding = new MutagenEncodingWrapper(Encoding.GetEncoding(codePage));
+        var encoding = MutagenEncoding.GetEncoding(gameRelease, language);
         return new EncodingBundle(encoding, encoding);
     }
 

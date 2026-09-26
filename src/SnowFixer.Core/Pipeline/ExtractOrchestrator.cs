@@ -457,7 +457,7 @@ public sealed class ExtractOrchestrator
         Report("Writing plugin...");
         var espPath = Path.Combine(_outputFolder, "SnowFixer.esp");
         var writeBuilder = _outputMod.BeginWrite.ToPath(espPath).WithNoLoadOrder();
-        if (GameLanguageDetector.GetPlainPluginEncodings(gameLanguage) is { } plainEncodings)
+        if (GameLanguageDetector.GetPlainPluginEncodings(gameLanguage, gameRelease) is { } plainEncodings)
         {
             writeBuilder = writeBuilder.WithEmbeddedEncodings(plainEncodings);
         }
