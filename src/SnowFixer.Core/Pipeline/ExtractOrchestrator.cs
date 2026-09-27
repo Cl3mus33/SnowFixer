@@ -83,6 +83,7 @@ public sealed class ExtractOrchestrator
 
     private IGameEnvironment<ISkyrimMod, ISkyrimModGetter> _env = null!;
     private IGameFileProbe _fileProbe = null!;
+    private GameRelease _gameRelease;
     private Mo2InstanceReader? _mo2Reader;
     private static readonly ModKey _outputModKey = new("SnowFixer", ModType.Plugin);
     private SkyrimMod _outputMod = null!;
@@ -144,6 +145,7 @@ public sealed class ExtractOrchestrator
         }
 
         var gameRelease = ToGameRelease(_settings.GameType);
+        _gameRelease = gameRelease;
         var skyrimRelease = ToSkyrimRelease(_settings.GameType);
 
         string? mo2ProfileName = null;
@@ -1668,6 +1670,24 @@ public sealed class ExtractOrchestrator
                 }
             }
 
+            // Only clear vertex colors that are STILL exactly what this record's own closest
+            // official (vanilla/DLC) version provides - reported directly on Nexus: Cities of the
+            // North - Dawnstar and Whitepeak Tower - Dawnguard Themed Player Home both override LAND
+            // records under Dawnstar; COTN's own override never actually touches the color data
+            // (still byte-identical to its own vanilla master on every one of its 8 cells - safe to
+            // clear), but Whitepeak Tower's 4 cells have genuinely different vertex colors (and
+            // texture layer counts) from vanilla - clearing those wiped out the mod's own deliberate
+            // terrain blending around its own construction, visually reverting its work toward
+            // vanilla. "Official" means the closest context (walking winning-to-original) whose
+            // ModKey is one of ImplicitBaseMasterFileNames - not the absolute original master:
+            // comparing against the absolute root instead flagged 91 of 95 "modified" cells on a real
+            // test load order as false positives, because Dawnguard/Update/HearthFires/Dragonborn all
+            // legitimately differ from Skyrim.esm's own base content in their own areas.
+            if (!IsVertexColorsUnmodifiedFromMaster(record))
+            {
+                continue;
+            }
+
             var overrideRecord = context.GetOrAddAsOverride(_outputMod);
             overrideRecord.Flags = overrideRecord.Flags!.Value & ~Landscape.Flag.VertexColors;
             overrideRecord.VertexColors = null;
@@ -1675,6 +1695,52 @@ public sealed class ExtractOrchestrator
         }
 
         report($"Landscape: {_landscapesPatched} record(s) had their vertex colors cleared.", 0, 0);
+    }
+
+    private bool IsVertexColorsUnmodifiedFromMaster(ILandscapeGetter winning)
+    {
+        var contexts = _env.LinkCache.ResolveAllContexts<ILandscape, ILandscapeGetter>(winning.FormKey).ToList();
+        if (contexts.Count <= 1)
+        {
+            // No override chain at all - winning IS the originating master's own record.
+            return true;
+        }
+
+        var officialFileNames = new HashSet<string>(
+            Mo2LoadOrderMaterializer.ImplicitBaseMasterFileNames(_gameRelease),
+            StringComparer.OrdinalIgnoreCase);
+        var officialContext = contexts.FirstOrDefault(c => officialFileNames.Contains(c.ModKey.FileName.String));
+        var officialRecord = officialContext?.Record ?? contexts[^1].Record;
+
+        return VertexColorsEqual(winning.VertexColors, officialRecord.VertexColors);
+    }
+
+    private static bool VertexColorsEqual(Noggog.IReadOnlyArray2d<Noggog.P3UInt8>? a, Noggog.IReadOnlyArray2d<Noggog.P3UInt8>? b)
+    {
+        if (a is null || b is null)
+        {
+            return a is null && b is null;
+        }
+
+        if (a.Width != b.Width || a.Height != b.Height)
+        {
+            return false;
+        }
+
+        for (var y = 0; y < a.Height; y++)
+        {
+            for (var x = 0; x < a.Width; x++)
+            {
+                var vA = a[x, y];
+                var vB = b[x, y];
+                if (vA.X != vB.X || vA.Y != vB.Y || vA.Z != vB.Z)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private static GameRelease ToGameRelease(GameType gameType) => gameType switch

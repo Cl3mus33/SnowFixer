@@ -5,6 +5,20 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.11] - 2026-09-28
+
+### Fixed
+- **`SnowFixer.esp` could wipe out another mod's own deliberate landscape vertex-color painting**
+  instead of only clearing vanilla's own baked-in "dirty snow" tint - reported on Nexus (Cities of
+  the North - Dawnstar, Whitepeak Tower - Dawnguard Themed Player Home; "il semble que Snow Fixer ne
+  prend pas en compte certains changements de terrain apportés par d'autres mods"). Confirmed
+  directly against both mods' real files: neither actually reverted, but Whitepeak Tower genuinely
+  repaints 4 of its own landscape cells (different vertex colors AND texture layers from vanilla) to
+  blend its own construction into the terrain, and Snow Fixer cleared that color data unconditionally
+  whenever the cell's own texture was snow-classified - visually reverting the mod's own work toward
+  vanilla. Vertex colors are now only cleared when they're still exactly what the cell's own closest
+  vanilla/DLC version already provides; a cell any other mod has genuinely repainted is left alone.
+
 ## [1.2.10] - 2026-09-26
 
 ### Fixed
