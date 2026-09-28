@@ -5,6 +5,22 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.12] - 2026-09-28
+
+### Fixed
+- **The MO2 Profile dropdown stayed empty for instances whose folders were moved individually in MO2**
+  - reported on Discord (a global instance under `%LOCALAPPDATA%\ModOrganizer`, mods and profiles on
+  another drive). Only `base_directory` was read from `ModOrganizer.ini`, but MO2 (Settings > Paths)
+  lets the mods, profiles and overwrite folders each be moved on their own - often with no
+  `base_directory` at all - so the profiles folder was looked for next to the ini, nothing was found,
+  and the picker stayed empty. `mod_directory`, `profiles_directory` and `overwrite_directory` are now
+  read too (also fixing the mod scan itself for those layouts), and values are cleaned the way Qt
+  stores them (`@ByteArray(...)` wrapper, surrounding quotes, doubled backslashes, `%BASE_DIR%`).
+  Reproduced on synthetic instances first: 4 of 7 layouts gave an empty list before, all 7 resolve now,
+  and a normal `base_directory`-only instance behaves exactly as before.
+- When no profile is found, the error now says which folder was searched and which `ModOrganizer.ini`
+  keys to check, instead of a generic "doesn't look like an MO2 instance".
+
 ## [1.2.11] - 2026-09-28
 
 ### Fixed
