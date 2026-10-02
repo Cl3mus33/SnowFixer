@@ -5,6 +5,25 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.13] - 2026-10-02
+
+### Fixed
+- **Snow/rock/mountain meshes coming out dark and shiny (or only half PBR-converted) when PG Patcher
+  runs after Snow Fixer** - reported on Nexus (AzEx1t; same symptom reported separately for AutoBlend).
+  Root-caused from PGPatcher's own trace log, not guessed: PG converts a shape to PBR only when it can
+  match its own TruePBR config against the shape's VANILLA diffuse, and the flag that tells the engine
+  to render PBR is set at that moment. Two things in Snow Fixer's duplicates defeated that:
+  - A TruePBR pack very often overrides the vanilla TXST records themselves (Snow01, SnowRocks01,
+    MountainSlab02Mask, ...) with `textures\pbr\...` paths. Baking that winning TextureSet put PBR
+    paths straight into the duplicate, which PG treats as "already converted" - textures present,
+    shader flag never set. The bake now takes the first TextureSet in the override chain whose diffuse
+    is not under `pbr\` (a plain retexture mod's non-PBR override is still the winning record itself).
+  - Non-snow landscape duplicates (made only to clear vertex colors) kept their Alternate Textures at
+    ESP level. With the mesh's only user overriding every such shape, PG never matched or flagged the
+    duplicate's own shape. Their Alternate Textures are now baked like the snow ones.
+  Measured on a real load order: 322 baked shapes carried `pbr\` paths before, 36 now (TextureSets
+  that only exist as PBR, left as they were); Alternate Textures baked 382 -> 1749, 0 failures.
+
 ## [1.2.12] - 2026-09-28
 
 ### Fixed

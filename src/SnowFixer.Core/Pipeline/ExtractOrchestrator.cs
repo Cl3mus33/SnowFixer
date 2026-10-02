@@ -97,6 +97,7 @@ public sealed class ExtractOrchestrator
     private int _malformedRecordsSkipped;
     private int _altTexBaked;
     private int _altTexFailed;
+    private int _altTexPbrReplacedByVanilla;
     private int _shaderFlagsPatched;
     private int _vertexColorsNeutralized;
     private int _collisionMaterialsRemapped;
@@ -454,6 +455,13 @@ public sealed class ExtractOrchestrator
         {
             _diagnostics.Add("This run's own new records exceed the ESL limit - plugin written as a "
                 + "regular (non-ESL) ESP instead.");
+        }
+
+        if (_altTexPbrReplacedByVanilla > 0)
+        {
+            _diagnostics.Add($"{_altTexPbrReplacedByVanilla} Alternate Texture(s) resolved to a TruePBR (\"pbr\\\") TextureSet "
+                + "override; the vanilla/non-PBR TextureSet from the same override chain was baked into the mesh instead, "
+                + "so PG Patcher can still match its own PBR config against it and flag the shape as PBR.");
         }
 
         Report("Writing plugin...");
@@ -815,6 +823,50 @@ public sealed class ExtractOrchestrator
         return newRelativePath;
     }
 
+    // Which TextureSet gets baked: a TruePBR texture pack (Vanaheimr, Vanilla PBR, ...) very often
+    // ships an ESP-level override of the vanilla TXST records themselves (Snow01, SnowRocks01,
+    // MountainSlab02Mask, ...) repointed at "textures\pbr\..." assets. Baking THAT winning set puts
+    // PBR-prefixed paths straight into the duplicate, and PG Patcher then treats the shape as
+    // already converted ("Winning Match: Default") - it never matches its own TruePBR json against
+    // the vanilla name and never sets the shape's PBR shader flag (SLSF2 Unused01), so the engine
+    // renders PBR texture data through the legacy shader (reported as very dark, shiny rock/mountain
+    // meshes). Verified against PGPatcher's own trace log: shapes whose embedded diffuse is the
+    // vanilla path convert ~97% of the time, "pbr\" ones almost never. Same principle as every
+    // other bake in this tool ("the vanilla-looking path is what gets baked, not the PBR one"), so
+    // the first TextureSet in the override chain (winning first) whose diffuse is NOT under "pbr\"
+    // is baked instead - for a plain retexture mod's non-PBR TXST override that's still the winning
+    // record itself, so non-PBR load orders are unaffected.
+    private ITextureSetGetter? ResolveTextureSetForBake(FormKey formKey)
+    {
+        ITextureSetGetter? winning = null;
+        foreach (var context in _env.LinkCache.ResolveAllContexts<ITextureSet, ITextureSetGetter>(formKey))
+        {
+            winning ??= context.Record;
+            var diffuse = context.Record.Diffuse?.GivenPath;
+            if (string.IsNullOrEmpty(diffuse) || IsPbrTexturePath(diffuse))
+            {
+                continue;
+            }
+
+            if (!ReferenceEquals(context.Record, winning))
+            {
+                _altTexPbrReplacedByVanilla++;
+            }
+
+            return context.Record;
+        }
+
+        return winning;
+    }
+
+    // TruePBR (PG Patcher / PBRNifPatcher) assets live under "textures\pbr\"; a TextureSet's own
+    // AssetLink paths are relative to "textures\", so "pbr\..." there (the full form is accepted too).
+    private static bool IsPbrTexturePath(string path) =>
+        path.StartsWith("pbr\\", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWith("pbr/", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWith("textures\\pbr\\", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWith("textures/pbr/", StringComparison.OrdinalIgnoreCase);
+
     // Bakes every resolvable Alternate Texture's own TextureSet straight into the matching shape
     // (by name, falling back to the shape's index among the NIF's own shape list when the name
     // doesn't match anything - the CK-authored name can go stale after a mesh's shapes are
@@ -843,8 +895,8 @@ public sealed class ExtractOrchestrator
         {
             try
             {
-                if (!_env.LinkCache.TryResolve<ITextureSetGetter>(altTex.NewTexture.FormKey, out var txst)
-                    || string.IsNullOrEmpty(txst.Diffuse?.GivenPath))
+                var txst = ResolveTextureSetForBake(altTex.NewTexture.FormKey);
+                if (txst is null || string.IsNullOrEmpty(txst.Diffuse?.GivenPath))
                 {
                     _diagnostics.Add($"'{label}': could not resolve Alternate Texture's TextureSet for shape '{altTex.Name}' - left as-is.");
                     _altTexFailed++;
@@ -1582,7 +1634,20 @@ public sealed class ExtractOrchestrator
                     continue;
                 }
 
-                getOrAddOverrideModel(record).File = lsDuplicatedPath;
+                var lsOverrideModel = getOrAddOverrideModel(record);
+                lsOverrideModel.File = lsDuplicatedPath;
+
+                // Bake this record's own Alternate Textures into its private duplicate too (same as
+                // the snow path below). Left at ESP level, PG Patcher sees a record that overrides
+                // the shape's texture and never matches/flags the duplicate's own base shape - and
+                // since this duplicate has exactly one user, nothing else ever would: the shape then
+                // renders the PBR Alternate Texture through the legacy shader (dark and shiny).
+                var lsAltTexs = TryGetAlternateTextures(record, getAlternateTextures, typeName, editorId, reportFailure: true);
+                if (lsAltTexs is { Count: > 0 } && BakeAlternateTextures(lsDuplicatedPath, lsAltTexs, editorId ?? modelPath))
+                {
+                    lsOverrideModel.AlternateTextures = null;
+                }
+
                 NeutralizeVertexColors(lsDuplicatedPath, editorId ?? modelPath);
                 _nonSnowLandscapeMeshesIncluded++;
                 continue;
