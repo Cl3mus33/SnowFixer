@@ -43,7 +43,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # Submodules
 #
 add_subdirectory(SnowFixer)
-add_subdirectory(SnowFixerTexTools)
 
 #
 # No VC Redist DLL copy step: CMAKE_MSVC_RUNTIME_LIBRARY above statically links the CRT into

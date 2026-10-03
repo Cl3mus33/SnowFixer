@@ -60,8 +60,7 @@ public sealed class ExtractOrchestrator
 
     // Folders HideDecalShapes is scoped to - the same three asset categories the reference mod
     // (nexusmods.com/skyrimspecialedition/mods/131170) ships its own fixed meshes under. DirtCliffs
-    // meshes are deliberately NOT included: their own "Skirt" shape must be kept (it's what
-    // GenerateDirtCliffsSnowVariant/RetextureDirtCliffsSkirt retextures for snow), and DirtCliffs
+    // meshes are deliberately NOT included: their own "Skirt" shape must be kept, and DirtCliffs
     // shapes never use the Rocks01/SnowRocks01 textures this feature targets anyway.
     private static readonly string[] HideDecalShapesFolderPatterns =
         { @"*\landscape\mountains\*", @"*\landscape\rocks\*", @"*\landscape\tundra\*" };
@@ -95,14 +94,9 @@ public sealed class ExtractOrchestrator
     private int _meshesCopied;
     private int _meshesFailed;
     private int _malformedRecordsSkipped;
-    private int _altTexBaked;
-    private int _altTexFailed;
-    private int _altTexPbrReplacedByVanilla;
     private int _shaderFlagsPatched;
     private int _vertexColorsNeutralized;
     private int _collisionMaterialsRemapped;
-    private int _dirtCliffsSkirtShapesRetextured;
-    private int _mountainSlabMaskSwapped;
     private int _decalShapesHidden;
     private int _decalCompanionShapesRetextured;
     private int _iceSnowMaterialsRemoved;
@@ -417,16 +411,6 @@ public sealed class ExtractOrchestrator
             }
         }
 
-        var dirtCliffsSnowVariantGenerated = false;
-        if (_settings.GenerateDirtCliffsSnowVariant)
-        {
-            Report("Generating DirtCliffsRoots snow variant texture...");
-            var textureGenerator = new DirtCliffsSnowVariantGenerator(_fileProbe, _outputFolder, _settings.GameType == GameType.SkyrimLE);
-            textureGenerator.Run();
-            dirtCliffsSnowVariantGenerated = textureGenerator.Generated;
-            _diagnostics.AddRange(textureGenerator.Diagnostics);
-        }
-
         // Guarantee SnowFixer.esp never depends on a plugin that isn't actually part of the loaded
         // setup - see RemoveLinksToUnavailableMasters.
         RemoveLinksToUnavailableMasters(IsPluginAvailable);
@@ -457,16 +441,26 @@ public sealed class ExtractOrchestrator
                 + "regular (non-ESL) ESP instead.");
         }
 
-        if (_altTexPbrReplacedByVanilla > 0)
-        {
-            _diagnostics.Add($"{_altTexPbrReplacedByVanilla} Alternate Texture(s) resolved to a TruePBR (\"pbr\\\") TextureSet "
-                + "override; the vanilla/non-PBR TextureSet from the same override chain was baked into the mesh instead, "
-                + "so PG Patcher can still match its own PBR config against it and flag the shape as PBR.");
-        }
-
         Report("Writing plugin...");
         var espPath = Path.Combine(_outputFolder, "SnowFixer.esp");
         var writeBuilder = _outputMod.BeginWrite.ToPath(espPath).WithNoLoadOrder();
+
+        // Masters are listed in the real load order (Skyrim.esm first, then the DLCs, then the rest in
+        // the order of the user's load order), like any plugin saved by xEdit or the CK. Mutagen's
+        // default is an alphabetical list, which put Dawnguard.esm before Skyrim.esm: xEdit flags an
+        // ESL-flagged plugin whose first master isn't the game master, and load-order tools read
+        // the list as the plugin's own required order. A master the loaded setup doesn't know about
+        // (one only pulled in as another mod's own master) is appended after the known ones.
+        var mastersInLoadOrder = _env.LoadOrder.ListedOrder.Select(l => l.ModKey).ToList();
+        foreach (var master in _outputMod.ModHeader.MasterReferences.Select(r => r.Master))
+        {
+            if (!mastersInLoadOrder.Contains(master))
+            {
+                mastersInLoadOrder.Add(master);
+            }
+        }
+
+        writeBuilder = writeBuilder.WithMastersListOrdering(mastersInLoadOrder);
         if (GameLanguageDetector.GetPlainPluginEncodings(gameLanguage, gameRelease) is { } plainEncodings)
         {
             writeBuilder = writeBuilder.WithEmbeddedEncodings(plainEncodings);
@@ -479,19 +473,14 @@ public sealed class ExtractOrchestrator
             _meshesCopied,
             _meshesFailed,
             _malformedRecordsSkipped,
-            _altTexBaked,
-            _altTexFailed,
             _shaderFlagsPatched,
             _vertexColorsNeutralized,
             _collisionMaterialsRemapped,
-            _dirtCliffsSkirtShapesRetextured,
-            _mountainSlabMaskSwapped,
             _decalShapesHidden,
             _decalCompanionShapesRetextured,
             _iceSnowMaterialsRemoved,
             _nonSnowLandscapeMeshesIncluded,
             _landscapesPatched,
-            dirtCliffsSnowVariantGenerated,
             _diagnostics,
             espPath);
 
@@ -512,19 +501,14 @@ public sealed class ExtractOrchestrator
             $"Meshes duplicated: {result.MeshesDuplicated}",
             $"Meshes failed to resolve: {result.MeshesFailed}",
             $"Malformed records skipped: {result.MalformedRecordsSkipped}",
-            $"Alternate Textures baked: {result.AlternateTexturesBaked}",
-            $"Alternate Textures that couldn't be baked: {result.AlternateTexturesFailed}",
             $"Meshes with ZBuffer_Write/No_Fade shader flag fixups: {result.ShaderFlagsPatched}",
             $"Meshes with vertex colors neutralized: {result.VertexColorsNeutralized}",
             $"Meshes with collision materials remapped to snow: {result.CollisionMaterialsRemapped}",
-            $"DirtCliffs 'Skirt' shapes retextured to the snow variant: {result.DirtCliffsSkirtShapesRetextured}",
-            $"MountainSlab shapes swapped to their Mask variant: {result.MountainSlabMaskSwapped}",
             $"Decal shapes hidden: {result.DecalShapesHidden}",
             $"Decal companion shapes retextured to snow: {result.DecalCompanionShapesRetextured}",
             $"Ice statics with their snow Material Object removed: {result.IceSnowMaterialsRemoved}",
             $"Non-snow landscape meshes also included for vertex color/collision fixups: {result.NonSnowLandscapeMeshesIncluded}",
             $"Landscape records with vertex colors cleared: {result.LandscapesPatched}",
-            $"DirtCliffsRoots snow variant texture generated: {result.DirtCliffsSnowVariantGenerated}",
             $"Plugin written: {espPath}",
             "",
             $"{result.Diagnostics.Count} diagnostic(s):",
@@ -823,136 +807,6 @@ public sealed class ExtractOrchestrator
         return newRelativePath;
     }
 
-    // Which TextureSet gets baked: a TruePBR texture pack (Vanaheimr, Vanilla PBR, ...) very often
-    // ships an ESP-level override of the vanilla TXST records themselves (Snow01, SnowRocks01,
-    // MountainSlab02Mask, ...) repointed at "textures\pbr\..." assets. Baking THAT winning set puts
-    // PBR-prefixed paths straight into the duplicate, and PG Patcher then treats the shape as
-    // already converted ("Winning Match: Default") - it never matches its own TruePBR json against
-    // the vanilla name and never sets the shape's PBR shader flag (SLSF2 Unused01), so the engine
-    // renders PBR texture data through the legacy shader (reported as very dark, shiny rock/mountain
-    // meshes). Verified against PGPatcher's own trace log: shapes whose embedded diffuse is the
-    // vanilla path convert ~97% of the time, "pbr\" ones almost never. Same principle as every
-    // other bake in this tool ("the vanilla-looking path is what gets baked, not the PBR one"), so
-    // the first TextureSet in the override chain (winning first) whose diffuse is NOT under "pbr\"
-    // is baked instead - for a plain retexture mod's non-PBR TXST override that's still the winning
-    // record itself, so non-PBR load orders are unaffected.
-    private ITextureSetGetter? ResolveTextureSetForBake(FormKey formKey)
-    {
-        ITextureSetGetter? winning = null;
-        foreach (var context in _env.LinkCache.ResolveAllContexts<ITextureSet, ITextureSetGetter>(formKey))
-        {
-            winning ??= context.Record;
-            var diffuse = context.Record.Diffuse?.GivenPath;
-            if (string.IsNullOrEmpty(diffuse) || IsPbrTexturePath(diffuse))
-            {
-                continue;
-            }
-
-            if (!ReferenceEquals(context.Record, winning))
-            {
-                _altTexPbrReplacedByVanilla++;
-            }
-
-            return context.Record;
-        }
-
-        return winning;
-    }
-
-    // TruePBR (PG Patcher / PBRNifPatcher) assets live under "textures\pbr\"; a TextureSet's own
-    // AssetLink paths are relative to "textures\", so "pbr\..." there (the full form is accepted too).
-    private static bool IsPbrTexturePath(string path) =>
-        path.StartsWith("pbr\\", StringComparison.OrdinalIgnoreCase)
-        || path.StartsWith("pbr/", StringComparison.OrdinalIgnoreCase)
-        || path.StartsWith("textures\\pbr\\", StringComparison.OrdinalIgnoreCase)
-        || path.StartsWith("textures/pbr/", StringComparison.OrdinalIgnoreCase);
-
-    // Bakes every resolvable Alternate Texture's own TextureSet straight into the matching shape
-    // (by name, falling back to the shape's index among the NIF's own shape list when the name
-    // doesn't match anything - the CK-authored name can go stale after a mesh's shapes are
-    // renamed/reordered, but the engine itself resolves by index) of the just-duplicated mesh - all
-    // 8 slots (diffuse, normal, glow, height, environment, mask, multilayer, backlight/specular),
-    // not just the diffuse, since baking only the diffuse left a shape's other slots (most visibly
-    // the normal map) mismatched against whatever the mesh's own original default happened to
-    // embed. Returns true if at least one shape was baked, meaning the caller should drop
-    // AlternateTextures from the override so the now-redundant ESP-level data doesn't linger.
-    private bool BakeAlternateTextures(string duplicatedRelativePath, IReadOnlyList<IAlternateTextureGetter> altTexs, string label)
-    {
-        var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
-
-        using var nifFile = new NifFile();
-        if (NifIo.Load(nifFile, fullPath) != 0)
-        {
-            _diagnostics.Add($"'{label}': failed to reload duplicated mesh for Alternate Texture baking.");
-            return false;
-        }
-
-        var shapes = nifFile.GetShapes().ToList();
-        var baked = false;
-        var failed = false;
-
-        foreach (var altTex in altTexs)
-        {
-            try
-            {
-                var txst = ResolveTextureSetForBake(altTex.NewTexture.FormKey);
-                if (txst is null || string.IsNullOrEmpty(txst.Diffuse?.GivenPath))
-                {
-                    _diagnostics.Add($"'{label}': could not resolve Alternate Texture's TextureSet for shape '{altTex.Name}' - left as-is.");
-                    _altTexFailed++;
-                    failed = true;
-                    continue;
-                }
-
-                var shape = shapes.FirstOrDefault(s => s.name.get() == altTex.Name)
-                    ?? (altTex.Index >= 0 && altTex.Index < shapes.Count ? shapes[altTex.Index] : null);
-                if (shape is null)
-                {
-                    _diagnostics.Add($"'{label}': Alternate Texture's shape '{altTex.Name}' (index {altTex.Index}) not found in the duplicated mesh - left as-is.");
-                    _altTexFailed++;
-                    failed = true;
-                    continue;
-                }
-
-                // Materialize all slots before changing the NIF so a malformed path cannot leave a
-                // partially baked Alternate Texture behind.
-                var slots = TextureSetSlots(txst).ToArray();
-                foreach (var (slot, path) in slots)
-                {
-                    if (!string.IsNullOrEmpty(path))
-                    {
-                        nifFile.SetTextureSlot(shape, path, slot);
-                    }
-                }
-
-                baked = true;
-                _altTexBaked++;
-            }
-            catch (AssetPathMisalignedException ex)
-            {
-                _altTexFailed++;
-                failed = true;
-                _diagnostics.Add(
-                    $"'{label}': invalid Alternate Texture asset path for shape '{altTex.Name}' - left as-is. {ex.Message}");
-            }
-        }
-
-        if (baked)
-        {
-            var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
-            if (NifIo.Save(nifFile, fullPath, saveOptions) != 0)
-            {
-                _diagnostics.Add($"'{label}': failed to save the mesh after baking Alternate Textures.");
-                return false;
-            }
-        }
-
-        // Keep the ESP-level list when any entry failed. Dropping the whole list after baking only
-        // a subset would silently discard the failed Alternate Texture, while retaining it is a
-        // safe fallback for both the malformed and successfully baked entries.
-        return baked && !failed;
-    }
-
     // Same fix as AutoBlend's own NiAlphaBlendPatcher: every shape carrying a NiAlphaProperty
     // (alpha test or alpha blend, whatever the source mesh already had) gets ZBuffer_Write and
     // No_Fade set on its shader flags. Many source meshes ship with these disabled, which causes
@@ -1087,7 +941,7 @@ public sealed class ExtractOrchestrator
         var patched = hidAny || retexturedAny;
         if (patched)
         {
-            // Same cleanup as RetextureDirtCliffsSkirt/SwapMountainSlabToMaskVariant - cloning a
+            // Same cleanup as Retexturing a shape - cloning a
             // shared texture set per matching shape leaves each original block behind once nothing
             // references it anymore.
             header.DeleteBlockByType("BSShaderTextureSet", true);
@@ -1143,7 +997,7 @@ public sealed class ExtractOrchestrator
     // NiAlphaProperty, so it's real geometry rather than the decal itself - see HideDecalShapes'
     // own comment) to the vanilla snow ground texture, exactly as Vanaheimr's own "_snow" mesh
     // variants do for the identical shape. Same private-texture-set-clone pattern as
-    // SwapMountainSlabToMaskVariant, since the texture set may be shared with sibling shapes.
+    // the other retexturing passes, since the texture set may be shared with sibling shapes.
     private static bool RetextureCompanionToSnow(NifFile nifFile, NiShape shape, BSLightingShaderProperty shaderProperty)
     {
         if (nifFile.GetHeader().GetBlockById(shaderProperty.TextureSetRef().index) is not BSShaderTextureSet textureSet)
@@ -1374,169 +1228,6 @@ public sealed class ExtractOrchestrator
         return remapped;
     }
 
-    // DirtCliffsRoots-family meshes (DirtCliffs01, DirtCliffs03, DirtCliffsCornerIn01,
-    // DirtCliffsCornerOut01, DirtCliffsIsland01, ...) share one texture atlas across several
-    // differently-named shapes - roots, an unrelated bottom band, and a "Skirt" shape that samples
-    // the "dirt" blend-mask band DirtCliffsSnowVariantGenerator's own composite targets. Only the
-    // Skirt shape's own texture gets repointed at the generated snow variant; every other shape in
-    // the same mesh (roots, the cliff rock geometry itself) keeps whatever texture it already had -
-    // confirmed directly against a real generated mesh: every DirtCliffs-family mesh carries exactly
-    // one shape named "Skirt". Always writes the plain vanilla-convention path (see
-    // DirtCliffsSnowVariantGenerator.OutputDiffuseRelativePath's own comment for why that's correct
-    // for PBR users too).
-    private void RetextureDirtCliffsSkirt(string duplicatedRelativePath, string label)
-    {
-        var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
-
-        using var nifFile = new NifFile();
-        if (NifIo.Load(nifFile, fullPath) != 0)
-        {
-            _diagnostics.Add($"'{label}': failed to reload duplicated mesh for DirtCliffs skirt retexturing.");
-            return;
-        }
-
-        var skirtShape = nifFile.GetShapes().FirstOrDefault(s => string.Equals(s.name.get(), "Skirt", StringComparison.OrdinalIgnoreCase));
-        if (skirtShape is null)
-        {
-            _diagnostics.Add($"'{label}': no 'Skirt' shape found for DirtCliffs snow-variant retexturing - left as-is.");
-            return;
-        }
-
-        if (skirtShape.HasShaderProperty()
-            && nifFile.GetHeader().GetBlockById(skirtShape.ShaderPropertyRef().index) is BSLightingShaderProperty skirtShaderProperty
-            && nifFile.GetHeader().GetBlockById(skirtShaderProperty.TextureSetRef().index) is BSShaderTextureSet sharedTextureSet)
-        {
-            // Skirt shares its BSShaderTextureSet block with sibling shapes (e.g. the root pieces) in
-            // these meshes - editing it in place would retexture those siblings too. Give Skirt its own
-            // private copy of the texture set before touching any slot.
-            var privateItems = new vectorNiString();
-            foreach (var item in sharedTextureSet.textures.items())
-            {
-                privateItems.Add(new NiString(item.get()));
-            }
-
-            var privateTextureSet = new BSShaderTextureSet();
-            var privateVector = new NiStringVector();
-            privateVector.SetItems(privateItems);
-            privateTextureSet.textures = privateVector;
-
-            var privateTextureSetIndex = nifFile.GetHeader().AddBlock(privateTextureSet);
-            // AddBlock hands ownership of the native object to the header's own block vector, but the
-            // SWIG wrapper still thinks it owns it too - without this, its finalizer double-frees the
-            // native pointer once the header (and its own copy) is torn down, crashing the process.
-            GC.SuppressFinalize(privateTextureSet);
-            skirtShaderProperty.SetTextureSetRef(privateTextureSetIndex);
-        }
-
-        nifFile.SetTextureSlot(skirtShape, DirtCliffsSnowVariantGenerator.OutputDiffuseRelativePath, 0);
-        nifFile.SetTextureSlot(skirtShape, DirtCliffsSnowVariantGenerator.OutputNormalRelativePath, 1);
-
-        // Cloning Skirt's texture set above (when it was shared) leaves the original block behind -
-        // still present in the file but referenced by nothing, which NifSkope shows as a dimmed,
-        // disconnected block. orphanedOnly=true only removes texture sets no shape still points to, so
-        // this is a no-op whenever Skirt's texture set wasn't shared to begin with.
-        nifFile.GetHeader().DeleteBlockByType("BSShaderTextureSet", true);
-
-        var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
-        if (NifIo.Save(nifFile, fullPath, saveOptions) != 0)
-        {
-            _diagnostics.Add($"'{label}': failed to save the mesh after DirtCliffs skirt retexturing.");
-            return;
-        }
-
-        _dirtCliffsSkirtShapesRetextured++;
-    }
-
-    // For records whose EditorID ends in "Snow"/"SN" - a naming convention some texture packs use
-    // for their own hand-authored snow variant of a record - the mesh may still embed the plain
-    // (non-snow) "mountainslab01"/"mountainslab02" diffuse rather than that pack's own "...Mask"
-    // sibling, which several rock/mountain texture packs ship specifically for use under a snow
-    // overlay. Every shape whose diffuse matches gets repointed, not just one named shape - unlike
-    // DirtCliffs' single "Skirt" shape, there's no established single-shape convention here. Only
-    // ever swaps to a sibling that actually exists on disk - never invents a path a texture pack
-    // might not ship.
-    private void SwapMountainSlabToMaskVariant(string duplicatedRelativePath, string label)
-    {
-        var fullPath = Path.Combine(_outputFolder, "meshes", duplicatedRelativePath);
-
-        using var nifFile = new NifFile();
-        if (NifIo.Load(nifFile, fullPath) != 0)
-        {
-            _diagnostics.Add($"'{label}': failed to reload duplicated mesh for MountainSlab mask swap.");
-            return;
-        }
-
-        var swapped = false;
-        foreach (var shape in nifFile.GetShapes())
-        {
-            if (!shape.HasShaderProperty()
-                || nifFile.GetHeader().GetBlockById(shape.ShaderPropertyRef().index) is not BSLightingShaderProperty shaderProperty
-                || nifFile.GetHeader().GetBlockById(shaderProperty.TextureSetRef().index) is not BSShaderTextureSet textureSet)
-            {
-                continue;
-            }
-
-            var items = textureSet.textures.items();
-            if (items.Count == 0)
-            {
-                continue;
-            }
-
-            var diffuse = items[0].get();
-            if (string.IsNullOrEmpty(diffuse)
-                || !(diffuse.EndsWith("mountainslab01.dds", StringComparison.OrdinalIgnoreCase)
-                    || diffuse.EndsWith("mountainslab02.dds", StringComparison.OrdinalIgnoreCase)))
-            {
-                continue;
-            }
-
-            var maskPath = diffuse[..^".dds".Length] + "Mask.dds";
-            if (!_fileProbe.Exists(maskPath))
-            {
-                _diagnostics.Add($"'{label}': shape '{shape.name.get()}' uses '{diffuse}' but no '{maskPath}' sibling exists - left as-is.");
-                continue;
-            }
-
-            // The texture set may be shared with sibling shapes (same pitfall as DirtCliffs' own
-            // Skirt shape above) - give this shape its own private copy before touching any slot.
-            var privateItems = new vectorNiString();
-            foreach (var item in items)
-            {
-                privateItems.Add(new NiString(item.get()));
-            }
-
-            var privateTextureSet = new BSShaderTextureSet();
-            var privateVector = new NiStringVector();
-            privateVector.SetItems(privateItems);
-            privateTextureSet.textures = privateVector;
-
-            var privateTextureSetIndex = nifFile.GetHeader().AddBlock(privateTextureSet);
-            GC.SuppressFinalize(privateTextureSet);
-            shaderProperty.SetTextureSetRef(privateTextureSetIndex);
-
-            nifFile.SetTextureSlot(shape, maskPath, 0);
-            swapped = true;
-        }
-
-        if (!swapped)
-        {
-            return;
-        }
-
-        // Same cleanup as RetextureDirtCliffsSkirt above - cloning a shared texture set per matching
-        // shape leaves each original block behind once nothing references it anymore.
-        nifFile.GetHeader().DeleteBlockByType("BSShaderTextureSet", true);
-
-        var saveOptions = new NifSaveOptions { optimize = false, sortBlocks = false };
-        if (NifIo.Save(nifFile, fullPath, saveOptions) != 0)
-        {
-            _diagnostics.Add($"'{label}': failed to save the mesh after MountainSlab mask swap.");
-            return;
-        }
-
-        _mountainSlabMaskSwapped++;
-    }
-
     // Shared by ProcessType's early demotion check (reportFailure: false - the record may not even
     // end up in scope, so a malformed path there shouldn't count as a real failure) and its main,
     // in-scope fetch (reportFailure: true - matches the original diagnostic/counter behavior).
@@ -1637,17 +1328,9 @@ public sealed class ExtractOrchestrator
                 var lsOverrideModel = getOrAddOverrideModel(record);
                 lsOverrideModel.File = lsDuplicatedPath;
 
-                // Bake this record's own Alternate Textures into its private duplicate too (same as
-                // the snow path below). Left at ESP level, PG Patcher sees a record that overrides
-                // the shape's texture and never matches/flags the duplicate's own base shape - and
-                // since this duplicate has exactly one user, nothing else ever would: the shape then
-                // renders the PBR Alternate Texture through the legacy shader (dark and shiny).
-                var lsAltTexs = TryGetAlternateTextures(record, getAlternateTextures, typeName, editorId, reportFailure: true);
-                if (lsAltTexs is { Count: > 0 } && BakeAlternateTextures(lsDuplicatedPath, lsAltTexs, editorId ?? modelPath))
-                {
-                    lsOverrideModel.AlternateTextures = null;
-                }
-
+                // The record keeps its own Alternate Textures untouched and the copy keeps the
+                // mesh's own embedded texture paths: a copy only exists for the structural edit
+                // below, texture handling stays exactly what vanilla (and PG Patcher) expects.
                 NeutralizeVertexColors(lsDuplicatedPath, editorId ?? modelPath);
                 _nonSnowLandscapeMeshesIncluded++;
                 continue;
@@ -1662,11 +1345,8 @@ public sealed class ExtractOrchestrator
             var overrideModel = getOrAddOverrideModel(record);
             overrideModel.File = duplicatedPath;
 
-            var altTexs = TryGetAlternateTextures(record, getAlternateTextures, typeName, editorId, reportFailure: true);
-            if (altTexs is { Count: > 0 } && BakeAlternateTextures(duplicatedPath, altTexs, editorId ?? modelPath))
-            {
-                overrideModel.AlternateTextures = null;
-            }
+            // Alternate Textures are never baked into the copy: the record keeps its own (ESP-level)
+            // and the copy keeps the mesh's own embedded texture paths, as in vanilla.
 
             ApplyAlphaShaderFixups(duplicatedPath, editorId ?? modelPath);
             if (isLandscape && _settings.MeshVertexColorMode != MeshVertexColorMode.None)
@@ -1676,15 +1356,6 @@ public sealed class ExtractOrchestrator
             if (isLandscape && _settings.CollisionMaterialMode != CollisionMaterialMode.None)
             {
                 RemapCollisionMaterials(duplicatedPath, editorId ?? modelPath);
-            }
-            if (_settings.GenerateDirtCliffsSnowVariant && modelPath.Contains("dirtcliffs", StringComparison.OrdinalIgnoreCase))
-            {
-                RetextureDirtCliffsSkirt(duplicatedPath, editorId ?? modelPath);
-            }
-            if (_settings.SwapMountainSlabMask && editorId is not null
-                && (editorId.EndsWith("Snow", StringComparison.OrdinalIgnoreCase) || editorId.EndsWith("SN", StringComparison.OrdinalIgnoreCase)))
-            {
-                SwapMountainSlabToMaskVariant(duplicatedPath, editorId);
             }
             if (_settings.HideDecalShapes && IsHideDecalShapesEligibleFolder(modelPath))
             {

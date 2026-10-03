@@ -44,20 +44,6 @@ public sealed class ExtractSettings
     /// behavior to preserve, and it affects gameplay-audible footstep sounds, so it starts opt-in.</summary>
     public CollisionMaterialMode CollisionMaterialMode { get; set; } = CollisionMaterialMode.None;
 
-    /// <summary>Generates a snow variant of Vanaheimr's "landscape\dirtcliffs\dirtcliffsroots01"
-    /// texture - see <see cref="Pipeline.DirtCliffsSnowVariantGenerator"/> for the full mechanics.
-    /// One specific, hardcoded texture pair rather than a general engine - opt-in, off by
-    /// default.</summary>
-    public bool GenerateDirtCliffsSnowVariant { get; set; }
-
-    /// <summary>For a record whose EditorID ends in "Snow" or "SN" (case-insensitive), swaps any
-    /// shape's diffuse texture ending in "mountainslab01.dds"/"mountainslab02.dds" (case-insensitive)
-    /// for its "...Mask.dds" sibling in the same folder, when that sibling actually exists on disk -
-    /// see <see cref="Pipeline.ExtractOrchestrator.SwapMountainSlabToMaskVariant"/>. One specific,
-    /// hardcoded texture pair rather than a general engine - opt-in, off by default, same reasoning
-    /// as <see cref="GenerateDirtCliffsSnowVariant"/>.</summary>
-    public bool SwapMountainSlabMask { get; set; }
-
     /// <summary>Hides (NiAVObject Hidden flag) any shape under a landscape\mountains\, landscape\rocks\,
     /// or landscape\tundra\ mesh whose diffuse texture is "Rocks01" or "SnowRocks01" - see
     /// <see cref="Pipeline.ExtractOrchestrator.HideDecalShapes"/>. Skyrim's own dynamic snow shader
@@ -65,9 +51,9 @@ public sealed class ExtractSettings
     /// shapes z-fight with it. Detection is by texture name, not the NIF's own SLSF1_Decal shader
     /// flag - that flag doesn't reliably mark every shape that needs hiding (confirmed empirically
     /// against vanilla meshes). DirtCliffs meshes are NOT touched by this - their own "Skirt" shape
-    /// must stay (see <see cref="GenerateDirtCliffsSnowVariant"/>). Hiding rather than deleting the
+    /// must stay. Hiding rather than deleting the
     /// block needs no plugin-side changes at all (no AltTexture reindexing) - opt-in, off by default,
-    /// same reasoning as <see cref="GenerateDirtCliffsSnowVariant"/>/<see cref="SwapMountainSlabMask"/>.
+    /// as a new capability.
     /// Modeled on "Enhanced Rocks and Mountains - Blending Patch And Other Fixes"
     /// (nexusmods.com/skyrimspecialedition/mods/131170), whose own "No Decals" patches take the
     /// heavier ESP-editing route this setting avoids.</summary>

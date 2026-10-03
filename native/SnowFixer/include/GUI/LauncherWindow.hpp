@@ -51,10 +51,6 @@ private:
     wxRadioButton* m_collisionMaterialModeSnowOnlyRadio = nullptr;
     PGModifiableListCtrl* m_meshBlacklistCtrl = nullptr;
     PGModifiableListCtrl* m_editorIdKeywordsCtrl = nullptr;
-    wxCheckBox* m_generateDirtCliffsSnowVariantCheckbox = nullptr;
-    wxStaticText* m_mountainSlabMaskLabel = nullptr;
-    wxCheckBox* m_swapMountainSlabMaskCheckbox = nullptr;
-    wxStaticText* m_mountainSlabMaskHelpText = nullptr;
     wxCheckBox* m_hideDecalShapesCheckbox = nullptr;
     wxCheckBox* m_removeIceSnowMaterialCheckbox = nullptr;
     wxButton* m_okButton = nullptr;
@@ -65,14 +61,12 @@ private:
     void onSaveConfigAs(wxCommandEvent&);
     void applyLoadedParams(const SFParams& params);
     void onBrowseGameLocation(wxCommandEvent&);
-    void onGameTypeChanged(wxCommandEvent&);
     void onBrowseOutputLocation(wxCommandEvent&);
     void onModManagerChanged(wxCommandEvent&);
     void onBrowseMo2Instance(wxCommandEvent&);
     void onMo2InstancePathChanged(wxCommandEvent&);
     void refreshMo2Profiles();
     void updateMo2FieldState();
-    void updateGameTypeFieldState();
     void commitPendingListEdits();
     void updateListColumnWidths();
     void onOkButtonPressed(wxCommandEvent&);

@@ -21,10 +21,6 @@ Data folder.
   they render correctly at a distance.
 - **Makes footsteps match** — remaps Dirt/Grass collision materials on the generated snow meshes to
   Snow, per collision chunk, so unrelated materials in the same mesh are left alone.
-- **Snowy dirt cliff roots** — generates a snow-covered DirtCliffsRoots texture from the roots
-  texture's alpha and the game's own snow texture (Vanilla / Complex Material / True PBR aware, with
-  a matching PBRNifPatcher json when needed) and applies it to exactly the right part ("Skirt") of
-  the generated DirtCliffs meshes.
 
 ### Optional extras (off by default)
 
@@ -36,8 +32,6 @@ Data folder.
 - **Ice Snow Material** — clears the `SnowMaterialGlacier` / `SnowMaterialGlacierSlab` Material
   Object link on every static that uses it, so no projected snow covers glaciers and ice. Only
   `SnowFixer.esp` changes; the ice's own shader material is left alone.
-- **MountainSlab Mask Swap** — for a record whose EditorID ends in "Snow"/"SN", uses the
-  "...Mask" version of MountainSlab01/02 when a texture pack ships one.
 
 Also included: mesh and EditorID keyword blacklists (wildcards supported, with sensible defaults for
 new installs) and config profiles to save/load the whole launcher setup as a JSON file — handy if
@@ -61,9 +55,6 @@ The actual scanning/patching logic lives in **`src/SnowFixer.Core`** (C#, built 
 - **`native/SnowFixer`** — a native wxWidgets shell (CMake + vcpkg + wxWidgets), calling into
   `SnowFixer.Core` through a [DNNE](https://github.com/dotnet/dnne)-exported
   `src/SnowFixer.NativeExport` assembly.
-- **`native/SnowFixerTexTools`** — a small native library on top of
-  [DirectXTex](https://github.com/microsoft/DirectXTex) that composites and recompresses the
-  DirtCliffsRoots snow variant texture (GPU-accelerated with a CPU fallback).
 
 ## Installation
 
@@ -113,7 +104,6 @@ merge, which `SnowFixer_dotnetlib` resolution depends on).
   [niflysharp](https://github.com/Aetherinox/niflysharp), for NIF file handling.
 - [Mutagen](https://github.com/Mutagen-Modding/Mutagen) for reading and writing Bethesda plugin
   files.
-- [DirectXTex](https://github.com/microsoft/DirectXTex) for texture compositing/compression.
 - The alpha-blending concept this whole family of tools (and AutoBlend before it) is built around
   traces back to the Majestic Landscapes modding standard; the "Hide Decal Shapes" feature is
   modeled on [Enhanced Rocks and Mountains - Blending Patch And Other

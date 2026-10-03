@@ -66,16 +66,6 @@
       "help": "Registros cujo EditorID contenha uma dessas palavras (sem diferenciar maiúsculas/minúsculas) são ignorados por completo - útil para excluir falsos positivos. Clique com o botão direito para adicionar/remover linhas.",
       "column": "Palavra-chave"
     },
-    "dirtCliffsSnowVariant": {
-      "label": "Variante de Neve do DirtCliffsRoots",
-      "checkbox": "Gerar uma variante de neve da textura DirtCliffsRoots01",
-      "help": "Gera o(s) arquivo(s) de textura e os aplica à parte \"Skirt\" das meshes DirtCliffs geradas."
-    },
-    "mountainSlabMask": {
-      "label": "Substituição Mask do MountainSlab",
-      "checkbox": "Substituir MountainSlab01/02 por sua variante Mask em meshes com nome de neve",
-      "help": "Para um registro cujo EditorID termina em \"Snow\"/\"SN\", redireciona qualquer shape que use MountainSlab01/02 para sua variante \"...Mask\", quando ela existir no disco."
-    },
     "hideDecalShapes": {
       "label": "Ocultar shapes de decalque",
       "checkbox": "Ocultar shapes Rocks01/SnowRocks01 em meshes de montanha/rocha/tundra",

@@ -225,8 +225,6 @@ void ProgressWindow::onWorkerFinished(
             summary << "Meshes duplicated: " << result.value("MeshesDuplicated", 0) << "\n";
             summary << "Meshes failed to resolve: " << result.value("MeshesFailed", 0) << "\n";
             summary << "Malformed records skipped: " << result.value("MalformedRecordsSkipped", 0) << "\n";
-            summary << "Alternate Textures baked: " << result.value("AlternateTexturesBaked", 0) << "\n";
-            summary << "Alternate Textures that couldn't be baked: " << result.value("AlternateTexturesFailed", 0) << "\n";
             summary << "Meshes with ZBuffer_Write/No_Fade shader flag fixups: " << result.value("ShaderFlagsPatched", 0) << "\n";
             summary << "Meshes with vertex colors neutralized: " << result.value("VertexColorsNeutralized", 0) << "\n";
             summary << "Landscape records with vertex colors cleared: " << result.value("LandscapesPatched", 0) << "\n";

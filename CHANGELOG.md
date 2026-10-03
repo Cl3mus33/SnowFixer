@@ -5,6 +5,32 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.14] - 2026-10-03
+
+### Fixed
+- **SnowFixer.esp now lists its masters in the load order's own order** (Skyrim.esm first, then the
+  DLCs, then the other plugins as the load order has them). Mutagen's default is an alphabetical list,
+  which put Dawnguard.esm before Skyrim.esm: xEdit flags an ESL-flagged plugin whose first master is
+  not the game master, and load-order tools read that list as the plugin's own required order - the
+  cause of the "Snow Fixer breaks my load order" reports. AutoBlend has written its masters this way
+  since an earlier release.
+- **Mountain slabs and other meshes staying non-PBR when PG Patcher runs after Snow Fixer** (reported
+  on Discord by wargenie). 1.2.13 wrote the vanilla texture of each Alternate Texture into the
+  duplicated mesh so PG Patcher could match it; for TextureSets like `MountainSlab02Mask` texture packs
+  change the TextureSet's own textures and ship their PBRNifPatcher json for `mountainslab02`, so the
+  baked path matched no json and PG left the shape alone (62 of 1418 meshes on the test load order).
+  Snow Fixer no longer writes any texture path into a mesh: a duplicated mesh keeps the texture paths of
+  the mesh it was copied from, and every record keeps its own Alternate Textures in the plugin, exactly
+  as in vanilla. A copy exists only for the structural edits (vertex colors, collision material,
+  shader flags, hidden decal shapes).
+
+### Removed
+- **MountainSlab Mask Swap.** It rewrote texture paths inside meshes, which is what PG Patcher cannot
+  follow.
+- **DirtCliffsRoots Snow Variant** (and `SnowFixerTexTools.dll`, which only existed for it): a
+  generated texture written into the "Skirt" shape of the DirtCliffs meshes. Existing settings files
+  that still contain these two options are read without error and the options are ignored.
+
 ## [1.2.13] - 2026-10-02
 
 ### Fixed

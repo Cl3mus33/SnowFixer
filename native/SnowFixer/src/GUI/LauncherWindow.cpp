@@ -86,8 +86,8 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     // "General" tab - the actual per-run settings, same split AutoBlend uses between per-run
     // settings and app-wide preferences. A plain wxPanel here used to mean the dialog itself grew
     // to fit however tall this tab's content got (SetSizerAndFit below) - fine while there were only
-    // a handful of settings, but every feature added since (Config Profile, Game Type, MountainSlab
-    // Mask, DirtCliffsRoots Snow Variant, Hide Decal Shapes, ...) made it taller, and reported
+    // a handful of settings, but every feature added since (Config Profile, Game Type, Hide Decal
+    // Shapes, Ice Snow Material, ...) made it taller, and reported
     // directly on Nexus: on a smaller display the resulting window is taller than the screen itself,
     // with no way to reach the controls (or even the Start button) below the fold - dragging the
     // window's own edges can't make it bigger than the screen. A wxScrolledWindow instead scrolls
@@ -146,7 +146,6 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     gameTypeChoices.Add(SFTr("launcher.gameType.le", "Skyrim Legendary Edition"));
     m_gameTypeChoice = new wxChoice(generalPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, gameTypeChoices);
     m_gameTypeChoice->SetSelection(initParams.gameType == SFGameType::SkyrimLE ? 1 : 0);
-    m_gameTypeChoice->Bind(wxEVT_CHOICE, &LauncherWindow::onGameTypeChanged, this);
     generalSizer->Add(m_gameTypeChoice, 0, wxEXPAND | wxALL, BORDER_SIZE);
 
     // Output location
@@ -294,10 +293,10 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     // footstep sounds match the now-snowy visual. No "All" option, unlike the vertex color mode
     // above - duplicating a non-snow mesh purely to fix its collision wasn't judged worth the extra
     // mesh. Off by default since this is a brand new, gameplay-audible capability. Paired side-by-side
-    // with the DirtCliffs snow variant below - same space-saving reasoning as the pair above.
-    auto* collisionDirtCliffsRowSizer = new wxBoxSizer(wxHORIZONTAL);
+    // with the decal/ice options below - same space-saving reasoning as the pair above.
+    auto* collisionOptionsRowSizer = new wxBoxSizer(wxHORIZONTAL);
     auto* collisionColumnSizer = new wxBoxSizer(wxVERTICAL);
-    auto* dirtCliffsColumnSizer = new wxBoxSizer(wxVERTICAL);
+    auto* optionsColumnSizer = new wxBoxSizer(wxVERTICAL);
 
     collisionColumnSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.collisionMaterial.label", "Collision Material (Footstep Sounds)")), 0,
         wxTOP, BORDER_SIZE);
@@ -327,66 +326,20 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
     collisionColumnSizer->Add(m_collisionMaterialModeNoneRadio, 0, wxTOP, BORDER_SIZE);
     collisionColumnSizer->Add(m_collisionMaterialModeSnowOnlyRadio, 0, wxTOP, BORDER_SIZE);
 
-    // MountainSlab Mask swap - one specific, hardcoded texture pair ("mountainslab01"/
-    // "mountainslab02" swapped for their own "...Mask" sibling), not a general texture-generation
-    // engine. Off by default. Placed in this column purely to balance the two columns' height -
-    // no thematic link to collision materials beyond both being small opt-in toggles.
-    //
-    // Both textures are Skyrim SE's own vanilla landscape assets (part of the SE-era visual
-    // overhaul) - Legendary Edition's own vanilla Data never shipped them under any esm/esp, so
-    // this can only ever match a shape on an LE load order that imports SE-authored meshes
-    // wholesale (a ported mod) - disabled whenever Game Type is Legendary Edition, since it would
-    // otherwise look like a real option that simply never does anything for the vast majority of
-    // real LE setups.
-    m_mountainSlabMaskLabel = makeSectionLabel(generalPanel, SFTr("launcher.mountainSlabMask.label", "MountainSlab Mask Swap"));
-    collisionColumnSizer->Add(m_mountainSlabMaskLabel, 0, wxTOP, BORDER_SIZE * 2);
-
-    m_swapMountainSlabMaskCheckbox = new wxCheckBox(generalPanel, wxID_ANY,
-        SFTr("launcher.mountainSlabMask.checkbox", "Swap MountainSlab01/02 for their Mask variant on snow-named meshes"));
-    m_swapMountainSlabMaskCheckbox->SetValue(initParams.swapMountainSlabMask);
-    collisionColumnSizer->Add(m_swapMountainSlabMaskCheckbox, 0, wxTOP, BORDER_SIZE);
-
-    m_mountainSlabMaskHelpText = new wxStaticText(generalPanel, wxID_ANY,
-        SFTr("launcher.mountainSlabMask.help",
-            "For a record whose EditorID ends in \"Snow\"/\"SN\", repoints any shape using "
-            "MountainSlab01/02 to its \"...Mask\" sibling, when one exists on disk."));
-    m_mountainSlabMaskHelpText->Wrap(HELP_WRAP_PAIRED);
-    collisionColumnSizer->Add(m_mountainSlabMaskHelpText, 0, wxTOP, BORDER_SIZE);
-
-    updateGameTypeFieldState();
-
-    // DirtCliffsRoots snow variant - one specific, hardcoded texture pair ("landscape\dirtcliffs\
-    // dirtcliffsroots01" composited with "landscape\snow01"), not a general texture-generation
-    // engine. Off by default.
-    dirtCliffsColumnSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.dirtCliffsSnowVariant.label", "DirtCliffsRoots Snow Variant")), 0,
-        wxTOP, BORDER_SIZE);
-
-    m_generateDirtCliffsSnowVariantCheckbox = new wxCheckBox(generalPanel, wxID_ANY,
-        SFTr("launcher.dirtCliffsSnowVariant.checkbox", "Generate a snow variant of DirtCliffsRoots01 texture"));
-    m_generateDirtCliffsSnowVariantCheckbox->SetValue(initParams.generateDirtCliffsSnowVariant);
-    dirtCliffsColumnSizer->Add(m_generateDirtCliffsSnowVariantCheckbox, 0, wxTOP, BORDER_SIZE);
-
-    auto* dirtCliffsSnowVariantHelpText = new wxStaticText(generalPanel, wxID_ANY,
-        SFTr("launcher.dirtCliffsSnowVariant.help",
-            "Generates the texture file(s) and applies them to the \"Skirt\" part of the "
-            "generated DirtCliffs meshes."));
-    dirtCliffsSnowVariantHelpText->Wrap(HELP_WRAP_PAIRED);
-    dirtCliffsColumnSizer->Add(dirtCliffsSnowVariantHelpText, 0, wxTOP, BORDER_SIZE);
-
     // Hide Rocks01/SnowRocks01-textured shapes on mountain/rock/tundra meshes - Skyrim's own dynamic
     // snow shaders (Simplicity of Snow, BDS3, ...) render via the decal pipeline too, so these small
     // detail-rock shapes z-fight with it. NOT applied to DirtCliffs meshes - their own "Skirt" shape
-    // must stay (that's what DirtCliffsRoots Snow Variant retextures for snow instead). Hides the
+    // must stay. Hides the
     // shape (NiAVObject Hidden flag) instead of deleting it, so block indices - and any plugin-side
     // AltTexture index - never move. Off by default. Modeled on "Enhanced Rocks and Mountains -
     // Blending Patch And Other Fixes" (nexusmods.com/skyrimspecialedition/mods/131170) - see credits.
-    dirtCliffsColumnSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.hideDecalShapes.label", "Hide Decal Shapes")), 0,
+    optionsColumnSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.hideDecalShapes.label", "Hide Decal Shapes")), 0,
         wxTOP, BORDER_SIZE * 2);
 
     m_hideDecalShapesCheckbox = new wxCheckBox(generalPanel, wxID_ANY,
         SFTr("launcher.hideDecalShapes.checkbox", "Hide Rocks01/SnowRocks01 shapes on mountain/rock/tundra meshes"));
     m_hideDecalShapesCheckbox->SetValue(initParams.hideDecalShapes);
-    dirtCliffsColumnSizer->Add(m_hideDecalShapesCheckbox, 0, wxTOP, BORDER_SIZE);
+    optionsColumnSizer->Add(m_hideDecalShapesCheckbox, 0, wxTOP, BORDER_SIZE);
 
     auto* hideDecalShapesHelpText = new wxStaticText(generalPanel, wxID_ANY,
         SFTr("launcher.hideDecalShapes.help",
@@ -395,18 +348,18 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
             "shape instead of deleting it, so no plugin changes are needed. Does not affect DirtCliffs "
             "meshes."));
     hideDecalShapesHelpText->Wrap(HELP_WRAP_PAIRED);
-    dirtCliffsColumnSizer->Add(hideDecalShapesHelpText, 0, wxTOP, BORDER_SIZE);
+    optionsColumnSizer->Add(hideDecalShapesHelpText, 0, wxTOP, BORDER_SIZE);
 
     // Ice snow material removal - clears STAT.DNAM's Material link on every static that points at
     // SnowMaterialGlacier/SnowMaterialGlacierSlab, so no projected snow covers glaciers/ice.
     // Plugin-only change (no mesh is touched). Off by default.
-    dirtCliffsColumnSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.removeIceSnowMaterial.label", "Ice Snow Material")), 0,
+    optionsColumnSizer->Add(makeSectionLabel(generalPanel, SFTr("launcher.removeIceSnowMaterial.label", "Ice Snow Material")), 0,
         wxTOP, BORDER_SIZE * 2);
 
     m_removeIceSnowMaterialCheckbox = new wxCheckBox(generalPanel, wxID_ANY,
         SFTr("launcher.removeIceSnowMaterial.checkbox", "Remove the glacier snow material from statics"));
     m_removeIceSnowMaterialCheckbox->SetValue(initParams.removeIceSnowMaterial);
-    dirtCliffsColumnSizer->Add(m_removeIceSnowMaterialCheckbox, 0, wxTOP, BORDER_SIZE);
+    optionsColumnSizer->Add(m_removeIceSnowMaterialCheckbox, 0, wxTOP, BORDER_SIZE);
 
     auto* removeIceSnowMaterialHelpText = new wxStaticText(generalPanel, wxID_ANY,
         SFTr("launcher.removeIceSnowMaterial.help",
@@ -414,11 +367,11 @@ LauncherWindow::LauncherWindow(const SFParams& initParams, filesystem::path exeP
             "that uses it, so no snow is projected on glaciers and ice. Only changes SnowFixer.esp - no "
             "mesh is modified, and the ice's own shader material is left alone."));
     removeIceSnowMaterialHelpText->Wrap(HELP_WRAP_PAIRED);
-    dirtCliffsColumnSizer->Add(removeIceSnowMaterialHelpText, 0, wxTOP, BORDER_SIZE);
+    optionsColumnSizer->Add(removeIceSnowMaterialHelpText, 0, wxTOP, BORDER_SIZE);
 
-    collisionDirtCliffsRowSizer->Add(collisionColumnSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, BORDER_SIZE);
-    collisionDirtCliffsRowSizer->Add(dirtCliffsColumnSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, BORDER_SIZE);
-    generalSizer->Add(collisionDirtCliffsRowSizer, 0, wxEXPAND | wxBOTTOM, BORDER_SIZE);
+    collisionOptionsRowSizer->Add(collisionColumnSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, BORDER_SIZE);
+    collisionOptionsRowSizer->Add(optionsColumnSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, BORDER_SIZE);
+    generalSizer->Add(collisionOptionsRowSizer, 0, wxEXPAND | wxBOTTOM, BORDER_SIZE);
 
     // Mesh blacklist and EditorID blacklist keywords - inline editable tables, same pattern as
     // AutoBlend's own. Paired side-by-side - same space-saving reasoning as the pairs above.
@@ -643,8 +596,6 @@ void LauncherWindow::getParams(SFParams& outParams) const
         }
     }
 
-    outParams.generateDirtCliffsSnowVariant = m_generateDirtCliffsSnowVariantCheckbox->GetValue();
-    outParams.swapMountainSlabMask = m_swapMountainSlabMaskCheckbox->GetValue();
     outParams.hideDecalShapes = m_hideDecalShapesCheckbox->GetValue();
     outParams.removeIceSnowMaterial = m_removeIceSnowMaterialCheckbox->GetValue();
 }
@@ -698,29 +649,6 @@ void LauncherWindow::onModManagerChanged([[maybe_unused]] wxCommandEvent& event)
     if (m_modManagerChoice->GetSelection() == 1) {
         refreshMo2Profiles();
     }
-}
-
-void LauncherWindow::onGameTypeChanged([[maybe_unused]] wxCommandEvent& event)
-{
-    updateGameTypeFieldState();
-}
-
-// MountainSlab01/02 and their own "...Mask" sibling are Skyrim SE's own vanilla landscape assets -
-// Legendary Edition's own vanilla Data never shipped them under any esm/esp, so this option can
-// only ever do something on an LE load order that imports SE-authored meshes wholesale (a ported
-// mod), not a real scenario for the vast majority of LE users. Disabling it (rather than just
-// leaving it checkable and relying on the existing "no Mask sibling found, left as-is" diagnostic)
-// avoids it looking like a real, working option that simply never does anything for almost anyone
-// on LE.
-void LauncherWindow::updateGameTypeFieldState()
-{
-    const bool isLe = m_gameTypeChoice->GetSelection() == 1;
-    if (isLe) {
-        m_swapMountainSlabMaskCheckbox->SetValue(false);
-    }
-    m_mountainSlabMaskLabel->Enable(!isLe);
-    m_swapMountainSlabMaskCheckbox->Enable(!isLe);
-    m_mountainSlabMaskHelpText->Enable(!isLe);
 }
 
 void LauncherWindow::updateMo2FieldState()
@@ -832,11 +760,8 @@ void LauncherWindow::applyLoadedParams(const SFParams& params)
     }
     m_editorIdKeywordsCtrl->InsertItem(m_editorIdKeywordsCtrl->GetItemCount(), "");
 
-    m_generateDirtCliffsSnowVariantCheckbox->SetValue(params.generateDirtCliffsSnowVariant);
-    m_swapMountainSlabMaskCheckbox->SetValue(params.swapMountainSlabMask);
     m_hideDecalShapesCheckbox->SetValue(params.hideDecalShapes);
     m_removeIceSnowMaterialCheckbox->SetValue(params.removeIceSnowMaterial);
-    updateGameTypeFieldState();
 
     updateListColumnWidths();
 }

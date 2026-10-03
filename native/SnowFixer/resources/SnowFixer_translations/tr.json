@@ -66,16 +66,6 @@
       "help": "EditorID’sinde bu sözcüklerden biri bulunan kayıtlar (büyük/küçük harf duyarsız) tamamen atlanır; yanlış pozitif eşleşmeleri hariç tutmak için kullanışlıdır. Satır eklemek/kaldırmak için sağ tıklayın.",
       "column": "Anahtar Sözcük"
     },
-    "dirtCliffsSnowVariant": {
-      "label": "DirtCliffsRoots Kar Varyantı",
-      "checkbox": "DirtCliffsRoots01 dokusunun kar varyantını oluştur",
-      "help": "Doku dosyalarını oluşturur ve bunları oluşturulan DirtCliffs mesh’lerinin \"Skirt\" parçasına uygular."
-    },
-    "mountainSlabMask": {
-      "label": "MountainSlab Mask Değişimi",
-      "checkbox": "Kar adlandırılmış mesh’lerde MountainSlab01/02’yi Mask varyantlarıyla değiştir",
-      "help": "EditorID’si \"Snow\"/\"SN\" ile biten bir kayıt için, diskte mevcutsa MountainSlab01/02 kullanan tüm shape’leri karşılık gelen \"...Mask\" kardeşine yönlendirir."
-    },
     "hideDecalShapes": {
       "label": "Decal Shape'leri Gizle",
       "checkbox": "Dağ/kaya/tundra mesh’lerinde Rocks01/SnowRocks01 shape’lerini gizle",

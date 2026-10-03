@@ -95,15 +95,6 @@ struct SFParams {
         L"marker", L"glacier", L"lod", L"ice", L"frozen", L"icicle",
     };
 
-    /// @brief Generates a snow variant of Vanaheimr's own "landscape\dirtcliffs\dirtcliffsroots01"
-    /// texture - one specific, hardcoded texture pair rather than a general engine. Off by default.
-    bool generateDirtCliffsSnowVariant = false;
-
-    /// @brief For a record whose EditorID ends in "Snow"/"SN", swaps a "mountainslab01"/
-    /// "mountainslab02" diffuse for its "...Mask" sibling when one exists on disk - one specific,
-    /// hardcoded texture pair rather than a general engine. Off by default.
-    bool swapMountainSlabMask = false;
-
     /// @brief Hides (rather than deletes) any shape flagged Decal/Dynamic_Decal, so it no longer
     /// z-fights with Skyrim's own decal-based dynamic snow shaders (Simplicity of Snow, BDS3, ...) -
     /// needs no plugin-side changes since the shape stays in the mesh. Off by default.

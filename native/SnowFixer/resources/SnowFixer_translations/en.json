@@ -66,16 +66,6 @@
       "help": "Records whose EditorID contains one of these words (case-insensitive) are skipped entirely - useful for excluding false-positive matches. Right click to add/remove rows.",
       "column": "Keyword"
     },
-    "dirtCliffsSnowVariant": {
-      "label": "DirtCliffsRoots Snow Variant",
-      "checkbox": "Generate a snow variant of DirtCliffsRoots01 texture",
-      "help": "Generates the texture file(s) and applies them to the \"Skirt\" part of the generated DirtCliffs meshes."
-    },
-    "mountainSlabMask": {
-      "label": "MountainSlab Mask Swap",
-      "checkbox": "Swap MountainSlab01/02 for their Mask variant on snow-named meshes",
-      "help": "For a record whose EditorID ends in \"Snow\"/\"SN\", repoints any shape using MountainSlab01/02 to its \"...Mask\" sibling, when one exists on disk."
-    },
     "hideDecalShapes": {
       "label": "Hide Decal Shapes",
       "checkbox": "Hide Rocks01/SnowRocks01 shapes on mountain/rock/tundra meshes",

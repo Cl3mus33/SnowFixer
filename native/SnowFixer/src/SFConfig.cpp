@@ -93,12 +93,6 @@ auto SFConfig::loadFrom(const filesystem::path& configFilePath) -> SFParams
                 params.editorIdBlacklistKeywords.push_back(StringUtil::utf8toUTF16(item.get<string>()));
             }
         }
-        if (configJ.contains("GenerateDirtCliffsSnowVariant")) {
-            params.generateDirtCliffsSnowVariant = configJ["GenerateDirtCliffsSnowVariant"].get<bool>();
-        }
-        if (configJ.contains("SwapMountainSlabMask")) {
-            params.swapMountainSlabMask = configJ["SwapMountainSlabMask"].get<bool>();
-        }
         if (configJ.contains("HideDecalShapes")) {
             params.hideDecalShapes = configJ["HideDecalShapes"].get<bool>();
         }
@@ -139,8 +133,6 @@ auto SFConfig::toJson(const SFParams& params) -> nlohmann::json
         configJ["EditorIdBlacklistKeywords"].push_back(StringUtil::utf16toUTF8(item));
     }
 
-    configJ["GenerateDirtCliffsSnowVariant"] = params.generateDirtCliffsSnowVariant;
-    configJ["SwapMountainSlabMask"] = params.swapMountainSlabMask;
     configJ["HideDecalShapes"] = params.hideDecalShapes;
     configJ["RemoveIceSnowMaterial"] = params.removeIceSnowMaterial;
 
