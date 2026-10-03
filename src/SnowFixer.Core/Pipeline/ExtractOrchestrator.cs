@@ -1448,35 +1448,45 @@ public sealed class ExtractOrchestrator
         var officialContext = contexts.FirstOrDefault(c => officialFileNames.Contains(c.ModKey.FileName.String));
         var officialRecord = officialContext?.Record ?? contexts[^1].Record;
 
-        return VertexColorsEqual(winning.VertexColors, officialRecord.VertexColors);
+        return VertexColorsMeanDifference(winning.VertexColors, officialRecord.VertexColors) <= RepaintedVertexColorsThreshold;
     }
 
-    private static bool VertexColorsEqual(Noggog.IReadOnlyArray2d<Noggog.P3UInt8>? a, Noggog.IReadOnlyArray2d<Noggog.P3UInt8>? b)
+    // A mod that re-saves a cell (a grass fix, a seam fix, ...) often nudges a few vertex colors by a few
+    // levels out of 255 - that is not a repaint, and treating it as one left that single cell tinted while
+    // every neighbour was cleared, which shows as a straight seam along the cell border (measured on a real
+    // load order: 15 cells of 2277 differed from vanilla, by 1.1/255 on average and 8.2/255 at most, all from
+    // one grass-fix mod). Only a clearly different paint job - mean difference per channel above this
+    // threshold - counts as a mod's own deliberate terrain painting and is kept.
+    private const double RepaintedVertexColorsThreshold = 16.0;
+
+    // Mean absolute difference per channel (0-255) between two vertex color grids; a missing or
+    // differently sized grid counts as infinitely different.
+    private static double VertexColorsMeanDifference(Noggog.IReadOnlyArray2d<Noggog.P3UInt8>? a, Noggog.IReadOnlyArray2d<Noggog.P3UInt8>? b)
     {
         if (a is null || b is null)
         {
-            return a is null && b is null;
+            return a is null && b is null ? 0 : double.PositiveInfinity;
         }
 
         if (a.Width != b.Width || a.Height != b.Height)
         {
-            return false;
+            return double.PositiveInfinity;
         }
 
+        long sum = 0;
+        var count = 0;
         for (var y = 0; y < a.Height; y++)
         {
             for (var x = 0; x < a.Width; x++)
             {
                 var vA = a[x, y];
                 var vB = b[x, y];
-                if (vA.X != vB.X || vA.Y != vB.Y || vA.Z != vB.Z)
-                {
-                    return false;
-                }
+                sum += Math.Abs(vA.X - vB.X) + Math.Abs(vA.Y - vB.Y) + Math.Abs(vA.Z - vB.Z);
+                count += 3;
             }
         }
 
-        return true;
+        return count == 0 ? 0 : (double)sum / count;
     }
 
     private static GameRelease ToGameRelease(GameType gameType) => gameType switch

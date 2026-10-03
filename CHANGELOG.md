@@ -5,6 +5,16 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.15] - 2026-10-03
+
+### Fixed
+- **A straight seam along a cell border (one side lighter) when "Clear on all terrain" was on.** Since 1.2.11
+  a terrain cell was skipped as "deliberately repainted by a mod" as soon as its vertex colors differed from
+  vanilla by a single value - but a mod that merely re-saves a cell (a grass fix, a seam fix) nudges a few
+  colors by a few levels out of 255. On a real load order 15 cells (all from one grass-fix mod, 1.1/255 on
+  average, 8.2/255 at most) stayed tinted while every neighbour was cleared. Only a mean difference above
+  16/255 per channel now counts as a mod's own paint job and is kept.
+
 ## [1.2.14] - 2026-10-03
 
 ### Fixed
