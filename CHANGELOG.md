@@ -5,6 +5,18 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.16] - 2026-10-03
+
+### Fixed
+- **"A referenced mod was not present on the load order being sorted against" (`MissingModException`) when
+  writing the plugin**, reported on Nexus with `ccrmssse001-necrohouse.esl` (a Creation Club plugin
+  that is loaded through Skyrim.ccc rather than plugins.txt). Introduced in 1.2.14, which sorts the
+  plugin's masters by load order: a record copied into the output can name a master that the active
+  plugin list does not contain, and Mutagen refuses to sort against a list that lacks it. Such masters are
+  now slotted in right after the game's own base masters and the write is retried, and if sorting is still
+  impossible the plugin is written with the default order instead - the order of the master list never
+  fails a run again.
+
 ## [1.2.15] - 2026-10-03
 
 ### Fixed

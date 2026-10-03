@@ -443,30 +443,63 @@ public sealed class ExtractOrchestrator
 
         Report("Writing plugin...");
         var espPath = Path.Combine(_outputFolder, "SnowFixer.esp");
-        var writeBuilder = _outputMod.BeginWrite.ToPath(espPath).WithNoLoadOrder();
-
         // Masters are listed in the real load order (Skyrim.esm first, then the DLCs, then the rest in
         // the order of the user's load order), like any plugin saved by xEdit or the CK. Mutagen's
         // default is an alphabetical list, which put Dawnguard.esm before Skyrim.esm: xEdit flags an
         // ESL-flagged plugin whose first master isn't the game master, and load-order tools read
-        // the list as the plugin's own required order. A master the loaded setup doesn't know about
-        // (one only pulled in as another mod's own master) is appended after the known ones.
+        // the list as the plugin's own required order.
+        //
+        // The load order only holds the plugins the user's own list activates. A record the output
+        // copies can still name a master outside it (reported on Nexus with a Creation Club plugin, e.g.
+        // ccrmssse001-necrohouse.esl, loaded from Skyrim.ccc rather than plugins.txt): Mutagen then
+        // throws MissingModException while sorting. Each such master is slotted in right after the
+        // game's own base masters and the write is retried; if sorting still cannot work the plugin is
+        // written with Mutagen's default order instead - a cosmetic ordering must never cost the run.
         var mastersInLoadOrder = _env.LoadOrder.ListedOrder.Select(l => l.ModKey).ToList();
-        foreach (var master in _outputMod.ModHeader.MasterReferences.Select(r => r.Master))
+        var baseMasters = Mo2LoadOrderMaterializer.ImplicitBaseMasterFileNames(gameRelease)
+            .Select(n => ModKey.FromNameAndExtension(n)).ToHashSet();
+        var plainEncodings = GameLanguageDetector.GetPlainPluginEncodings(gameLanguage, gameRelease);
+
+        void WritePlugin(IReadOnlyList<ModKey>? masterOrder)
         {
-            if (!mastersInLoadOrder.Contains(master))
+            var builder = _outputMod.BeginWrite.ToPath(espPath).WithNoLoadOrder();
+            if (masterOrder is not null)
             {
-                mastersInLoadOrder.Add(master);
+                builder = builder.WithMastersListOrdering(masterOrder);
+            }
+
+            if (plainEncodings is { } encodings)
+            {
+                builder = builder.WithEmbeddedEncodings(encodings);
+            }
+
+            builder.Write();
+        }
+
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                WritePlugin(mastersInLoadOrder);
+                break;
+            }
+            catch (Mutagen.Bethesda.Plugins.Exceptions.MissingModException ex)
+            {
+                var missing = ex.ModPaths.Select(path => path.ModKey).Where(key => !mastersInLoadOrder.Contains(key)).Distinct().ToList();
+                if (attempt >= 100 || missing.Count == 0)
+                {
+                    _diagnostics.Add($"Could not sort the plugin's own master list by load order ({ex.Message}) - "
+                        + "written with Mutagen's own default (alphabetical) order instead.");
+                    WritePlugin(null);
+                    break;
+                }
+
+                foreach (var key in missing)
+                {
+                    mastersInLoadOrder.Insert(mastersInLoadOrder.FindLastIndex(baseMasters.Contains) + 1, key);
+                }
             }
         }
-
-        writeBuilder = writeBuilder.WithMastersListOrdering(mastersInLoadOrder);
-        if (GameLanguageDetector.GetPlainPluginEncodings(gameLanguage, gameRelease) is { } plainEncodings)
-        {
-            writeBuilder = writeBuilder.WithEmbeddedEncodings(plainEncodings);
-        }
-
-        writeBuilder.Write();
 
         var result = new ExtractResult(
             _matched,
